@@ -1,7 +1,7 @@
-package com.hmdp.config;
+package com.cityeats.config;
 
-import com.hmdp.interceptor.LoginInterceptor;
-import com.hmdp.interceptor.RefreshTokenInterceptor;
+import com.cityeats.interceptor.LoginInterceptor;
+import com.cityeats.interceptor.RefreshTokenInterceptor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;

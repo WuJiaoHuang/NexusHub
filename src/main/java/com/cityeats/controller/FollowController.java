@@ -1,8 +1,8 @@
-package com.hmdp.controller;
+package com.cityeats.controller;
 
 
-import com.hmdp.dto.Result;
-import com.hmdp.service.IFollowService;
+import com.cityeats.dto.Result;
+import com.cityeats.service.IFollowService;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;

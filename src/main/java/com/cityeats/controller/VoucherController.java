@@ -1,9 +1,9 @@
-package com.hmdp.controller;
+package com.cityeats.controller;
 
 
-import com.hmdp.dto.Result;
-import com.hmdp.entity.Voucher;
-import com.hmdp.service.IVoucherService;
+import com.cityeats.dto.Result;
+import com.cityeats.entity.Voucher;
+import com.cityeats.service.IVoucherService;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;

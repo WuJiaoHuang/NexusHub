@@ -1,6 +1,6 @@
-package com.hmdp.config;
+package com.cityeats.config;
 
-import com.hmdp.utils.RedisConstants;
+import com.cityeats.utils.RedisConstants;
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.config.Config;

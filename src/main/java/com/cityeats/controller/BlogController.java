@@ -1,15 +1,15 @@
-package com.hmdp.controller;
+package com.cityeats.controller;
 
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.hmdp.dto.Result;
-import com.hmdp.dto.UserDTO;
-import com.hmdp.entity.Blog;
-import com.hmdp.entity.User;
-import com.hmdp.service.IBlogService;
-import com.hmdp.service.IUserService;
-import com.hmdp.utils.SystemConstants;
-import com.hmdp.utils.UserHolder;
+import com.cityeats.dto.Result;
+import com.cityeats.dto.UserDTO;
+import com.cityeats.entity.Blog;
+import com.cityeats.entity.User;
+import com.cityeats.service.IBlogService;
+import com.cityeats.service.IUserService;
+import com.cityeats.utils.SystemConstants;
+import com.cityeats.utils.UserHolder;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;

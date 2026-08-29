@@ -1,8 +1,8 @@
-package com.hmdp.controller;
+package com.cityeats.controller;
 
 
-import com.hmdp.dto.Result;
-import com.hmdp.service.IVoucherOrderService;
+import com.cityeats.dto.Result;
+import com.cityeats.service.IVoucherOrderService;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;

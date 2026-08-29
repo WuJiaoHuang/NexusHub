@@ -1,162 +1,111 @@
-# CityEats（城市食客）本地生活服务平台
+# CityEats
 
-## 一、项目简介
+CityEats 是一个面向本地生活场景的高并发后端服务平台，包含商户查询、优惠券秒杀、Feed、签到、附近商户等功能，并通过 Redis、RabbitMQ、Lua、Redisson 等机制处理缓存、高并发和异步任务。
 
-CityEats（城市食客）是一个基于Spring Boot的本地生活服务点评平台，提供了商铺管理、优惠券秒杀、用户关注、博客分享、签到打卡等完整功能，并采用了Redis、RabbitMQ等技术实现高性能和高并发处理。
+CityEats 是独立业务系统，不是 AIOps Sentinel 的运维模块。它也会作为 AIOps Sentinel 的第一个真实后端 Target，用于验证真实业务系统产生 Metrics、Logs、Health 后，能否被外部智能故障诊断平台通过标准化 MCP Tools 接入和分析。
 
-## 二、技术栈
+## 核心功能
 
-| 分类 | 技术 |
-|------|------|
-| 后端框架 | Spring Boot、MyBatis Plus、Spring MVC |
-| 数据存储 | MySQL（关系型数据库，存储核心业务数据）、Redis（缓存、分布式锁、点赞、关注关系、签到等功能）、RabbitMQ（消息队列，异步处理秒杀订单） |
-| 其他技术 | Redisson（Redis分布式锁实现）、Lua脚本（Redis原子操作）、Hutool（Java工具类库）、Lombok（简化Java代码） |
+- 用户登录：手机号验证码登录，Token 信息存入 Redis。
+- 用户签到：基于 Redis Bitmap 记录签到状态并统计连续签到。
+- 商户查询：支持商户详情、商户类型、附近商户和地理位置检索。
+- 缓存治理：通过 Redis cache 处理缓存穿透、缓存击穿和缓存雪崩问题。
+- 优惠券秒杀：使用 Lua 脚本保证库存扣减和一人一单判断的原子性。
+- 异步下单：通过 RabbitMQ 异步处理秒杀订单。
+- 分布式锁：使用 Redisson distributed lock 控制并发竞争。
+- Feed 流：使用 Redis ZSet 支持关注推送和滚动分页。
+- 点赞排行：使用 Redis ZSet 维护点赞用户顺序。
 
-## 三、项目结构
+## 技术栈
 
-```
-com.点评生活
-├── controller          # 控制器层，处理HTTP请求
-│   ├── BlogController
-│   ├── FollowController
-│   ├── ShopController
-│   ├── UserController
-│   └── VoucherOrderController
-├── service             # 业务逻辑层
-│   ├── impl            # 服务实现类
-│   ├── IBlogService
-│   ├── IFollowService
-│   └── IVoucherOrderService
-├── mapper              # MyBatis数据访问层
-├── entity              # 实体类
-├── dto                 # 数据传输对象
-├── interceptor         # 拦截器（登录拦截、token刷新）
-├── listener            # 消息监听器
-├── utils               # 工具类
-│   ├── RedisConstants
-│   ├── UserHolder      # 线程本地存储用户信息
-│   ├── RedisIdWorker   # 全局ID生成器
-│   └── CacheClient     # 缓存客户端工具
-└── config              # 配置类
+```text
+Spring Boot
+Spring MVC
+MyBatis Plus
+MySQL
+Redis
+RabbitMQ
+Redisson
+Lua
+Hutool
+Lombok
 ```
 
-## 四、核心功能模块
+## 代码结构
 
-### 1. 用户模块
-- 手机号验证码登录
-- Token认证（基于Redis存储）
-- 用户签到功能（使用Redis BitMap）
-- 连续签到统计
-
-### 2. 商铺模块
-- 商铺信息缓存（解决缓存穿透、击穿问题）
-- 商铺类型分类
-- 基于地理位置（GEO）的商铺搜索
-- 商铺信息更新（缓存同步）
-
-### 3. 优惠券秒杀模块
-- 秒杀券发布与管理
-- 基于Lua脚本的原子性库存扣减
-- Redis分布式锁防止超卖
-- RabbitMQ异步订单处理
-- 一人一单限制
-
-### 4. 博客模块
-- 探店博客发布
-- 博客点赞（使用Redis ZSet）
-- 点赞排行榜（Top5）
-- 关注推送（Feed流）
-- 滚动分页查询
-
-### 5. 社交模块
-- 用户关注/取关
-- 共同关注查询（Redis Set交集）
-- 关注推送博客流
-
-## 五、数据库设计
-
-主要数据表：
-
-| 表名 | 说明 |
-|------|------|
-| tb_user | 用户表 |
-| tb_user_info | 用户信息表 |
-| tb_shop | 商铺表 |
-| tb_shop_type | 商铺类型表 |
-| tb_voucher | 优惠券表 |
-| tb_seckill_voucher | 秒杀券表 |
-| tb_voucher_order | 订单表 |
-| tb_blog | 博客表 |
-| tb_blog_comments | 博客评论表 |
-| tb_follow | 关注关系表 |
-
-## 六、核心业务流程
-
-### 秒杀抢购流程
-
-```
-1. 用户发起秒杀请求
-2. 执行Lua脚本检查库存和重复购买
-3. 库存充足且未购买则生成订单ID
-4. 发送订单消息到RabbitMQ
-5. 异步消费消息创建订单并扣减库存
-6. 返回订单ID给前端
+```text
+com.cityeats
+├── config        Spring MVC、MyBatis、RabbitMQ、Redis、Redisson 配置
+├── controller    用户、商户、优惠券、博客、关注等 HTTP 接口
+├── dto           请求与响应 DTO
+└── entity        业务实体
 ```
 
-### 博客推送流程
+当前仓库保留的是核心业务代码子集。如果需要完整运行全部业务接口，需要补齐 service、mapper、interceptor、utils、listener 等模块。
 
+## 重点能力
+
+### Redis Cache
+
+商户查询场景使用 Redis 缓存热点数据，降低 MySQL 访问压力。项目设计中覆盖：
+
+- Cache penetration：缓存空对象。
+- Cache breakdown：互斥锁与逻辑过期。
+- Cache avalanche：不同 Key 设置离散过期时间。
+
+### Lua Atomic Seckill
+
+秒杀请求通过 Lua 脚本在 Redis 内完成库存校验、重复购买校验和扣减判断，避免高并发下库存超卖。
+
+### RabbitMQ Async Order
+
+秒杀资格判断通过后，订单创建进入 RabbitMQ 异步流程，减少用户请求链路等待时间。
+
+### Redisson Distributed Lock
+
+对一人一单等并发竞争场景使用 Redisson 分布式锁，避免多实例部署下的并发写入问题。
+
+### Bitmap Sign-in
+
+签到功能通过 Redis Bitmap 存储每日签到状态，支持快速统计连续签到天数。
+
+### GEO Nearby Search
+
+附近商户使用 Redis GEO 能力按位置查询，提高本地生活搜索场景的响应效率。
+
+### ZSet Feed
+
+关注 Feed 和点赞排行榜使用 Redis ZSet，以时间或分数排序支持滚动分页和 TopN 查询。
+
+## Observability 规划
+
+下一阶段会补充可观测性能力：
+
+- Spring Boot Actuator：暴露 `/actuator/health`、`/actuator/info`、`/actuator/prometheus`。
+- Micrometer Prometheus：导出 JVM、HTTP、HikariCP 和业务自定义指标。
+- Structured Logging：输出 JSON 结构化日志到 `logs/cityeats.log`。
+- Fault Injection：仅在 `chaos` profile 下启用 Redis 故障、数据库连接池压力和接口延迟注入。
+
+这些观测数据会被 AIOps Sentinel 通过 Prometheus Provider、FileLogProvider 和 SpringBootHealthProvider 查询，用于端到端故障诊断验证。
+
+## 本地依赖
+
+```text
+JDK 8+
+Maven 3.6+
+MySQL 5.7+
+Redis 6+
+RabbitMQ 3.8+
 ```
-1. 用户发布新博客
-2. 查询该用户的所有粉丝
-3. 将博客ID推送到每个粉丝的Feed流（Redis ZSet）
-4. 粉丝拉取时按时间排序获取博客列表
-```
 
-## 七、API接口文档
-
-### 用户接口
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | /user/code | 发送验证码 |
-| POST | /user/login | 用户登录 |
-| POST | /user/sign | 用户签到 |
-| GET | /user/sign/count | 获取连续签到天数 |
-
-### 商铺接口
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | /shop/{id} | 查询商铺详情 |
-| PUT | /shop | 更新商铺信息 |
-| GET | /shop/of/type | 按类型分页查询商铺 |
-
-### 秒杀接口
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | /voucher-order/seckill/{id} | 秒杀抢购 |
-| POST | /voucher/seckill | 新增秒杀券 |
-
-### 博客接口
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | /blog | 发布博客 |
-| PUT | /blog/like/{id} | 点赞/取消点赞 |
-| GET | /blog/hot | 热门博客列表 |
-| GET | /blog/of/follow | 关注推送博客 |
-
-## 八、环境配置
-
-### 配置文件示例 (`application.yml`)
+## 配置示例
 
 ```yaml
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/lifereview
+    url: jdbc:mysql://localhost:3306/cityeats?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
     username: root
-    password: 123456
+    password: your-password
   redis:
     host: localhost
     port: 6379
@@ -167,52 +116,20 @@ spring:
     password: guest
 ```
 
-### Redis Key设计
+## 与 AIOps Sentinel 的关系
 
-| Key模式 | 说明 |
-|---------|------|
-| login:user:token | 用户登录信息 |
-| login:code:phone | 验证码 |
-| cache:shop:id | 商铺缓存 |
-| seckill:stock:voucherId | 秒杀库存 |
-| blog:liked:blogId | 博客点赞集合 |
-| feed:userId | 用户Feed流 |
-| follows:userId | 用户关注集合 |
-| sign:userId:yyyyMM | 用户签到记录 |
+CityEats 首先是一个独立的本地生活高并发业务项目。AIOps Sentinel 是独立的通用智能故障诊断平台。
 
-## 九、项目特色
+两者的关系是：
 
-### 1. 缓存解决方案
-- **缓存穿透**：缓存空对象
-- **缓存击穿**：互斥锁 + 逻辑过期
-- **缓存雪崩**：设置不同过期时间
+```text
+CityEats 产生真实 Metrics / Logs / Health
+        ↓
+AIOps Sentinel Provider Adapter 查询这些观测数据
+        ↓
+MCP Tool 统一暴露给 Agent
+        ↓
+LLM Agent 生成根因分析、证据链和 ActionProposal
+```
 
-### 2. 高并发处理
-- Redis原子操作（Lua脚本）
-- 分布式锁（Redisson）
-- 消息队列异步处理
-- 全局ID生成器（雪花算法）
-
-### 3. 性能优化
-- Feed流推送（时间线排序）
-- 点赞排行榜（Redis ZSet）
-- 地理位置搜索（Redis GEO）
-- BitMap签到统计
-
-## 十、部署说明
-
-### 前置条件
-
-- JDK 8+
-- MySQL 5.7+
-- Redis 6.0+
-- RabbitMQ 3.8+
-- Maven 3.6+
-
-
-## 十一、注意事项
-
-1. **秒杀场景**：确保RabbitMQ服务正常运行，否则订单会丢失
-2. **Redis连接**：建议使用连接池，避免连接超时
-3. **分布式锁**：使用Redisson确保锁的可靠性
-4. **缓存一致性**：更新商铺信息后需同步删除缓存
+未来接入其他 Spring Boot 或微服务系统时，不应该修改 AIOps Sentinel 的 Agent 核心逻辑，而是新增 Target 配置和必要的 Provider Adapter。

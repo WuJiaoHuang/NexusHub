@@ -1,4 +1,4 @@
-package com.hmdp.dto;
+package com.cityeats.dto;
 
 import lombok.Data;
 
