@@ -1,0 +1,43 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: CityEats
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:cityeats}?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:123456}
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:10}
+      minimum-idle: ${DB_POOL_MIN_IDLE:2}
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+    database: ${REDIS_DATABASE:0}
+    timeout: 3000
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:cityeats}
+    password: ${RABBITMQ_PASSWORD:cityeats}
+    listener:
+      simple:
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 1000
+
+mybatis-plus:
+  type-aliases-package: com.cityeats.entity
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: auto
+
+logging:
+  level:
+    com.cityeats: info
