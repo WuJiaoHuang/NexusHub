@@ -13,6 +13,7 @@ import com.cityeats.utils.RedisIdWorker;
 import com.cityeats.utils.UserHolder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -38,6 +39,9 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     @Resource
     private RabbitTemplate rabbitTemplate;
 
+    @Value("${cityeats.seckill.stock-warmup-enabled:true}")
+    private boolean stockWarmupEnabled;
+
     static {
         SECKILL_SCRIPT.setLocation(new ClassPathResource("lua/seckill.lua"));
         SECKILL_SCRIPT.setResultType(Long.class);
@@ -45,6 +49,9 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
 
     @PostConstruct
     public void warmUpSeckillStock() {
+        if (!stockWarmupEnabled) {
+            return;
+        }
         seckillVoucherService.list().forEach(voucher ->
                 stringRedisTemplate.opsForValue().set("seckill:stock:" + voucher.getVoucherId(), String.valueOf(voucher.getStock())));
     }

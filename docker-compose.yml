@@ -1,0 +1,56 @@
+version: "3.8"
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: cityeats-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
+      MYSQL_DATABASE: cityeats
+      TZ: Asia/Shanghai
+    ports:
+      - "3306:3306"
+    volumes:
+      - cityeats-mysql-data:/var/lib/mysql
+      - ./sql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./sql/data.sql:/docker-entrypoint-initdb.d/02-data.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p123456"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:6.2
+    container_name: cityeats-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - cityeats-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: cityeats-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: cityeats
+      RABBITMQ_DEFAULT_PASS: cityeats
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - cityeats-rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  cityeats-mysql-data:
+  cityeats-redis-data:
+  cityeats-rabbitmq-data:
