@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   mysql:
     image: mysql:8.0
@@ -9,7 +7,7 @@ services:
       MYSQL_DATABASE: cityeats
       TZ: Asia/Shanghai
     ports:
-      - "3306:3306"
+      - "${MYSQL_PORT:-13306}:3306"
     volumes:
       - cityeats-mysql-data:/var/lib/mysql
       - ./sql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
@@ -24,7 +22,7 @@ services:
     image: redis:6.2
     container_name: cityeats-redis
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-16379}:6379"
     volumes:
       - cityeats-redis-data:/data
     healthcheck:
@@ -40,8 +38,8 @@ services:
       RABBITMQ_DEFAULT_USER: cityeats
       RABBITMQ_DEFAULT_PASS: cityeats
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "${RABBITMQ_PORT:-5673}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15673}:15672"
     volumes:
       - cityeats-rabbitmq-data:/var/lib/rabbitmq
     healthcheck:
