@@ -1,190 +1,325 @@
-# CityEats Completion Report
+# CityEats Phase 2 Completion Report
 
-## 总览
+## 1. 原项目状态
 
-本轮目标是对 CityEats 做一次完整性修复与工程化补全，使项目从课程代码子集整理为可编译、可测试、可打包的本地生活高并发后端项目。
+Phase 0 审计确认：
 
-本阶段没有引入 Actuator、Micrometer、Prometheus、Grafana、Elasticsearch、Doris、微服务拆分或新的复杂技术栈。当前重点是补齐核心业务链路、数据库脚本、Redis/RabbitMQ 集成、测试和中文 README。
+- Spring Boot 2.3.12 项目结构完整，Controller / Service / ServiceImpl / Mapper / Interceptor / Listener / Utils 已存在。
+- RabbitMQ Consumer 真实存在：`VoucherOrderListener`。
+- Redis Lua 秒杀脚本真实存在，`ARGV[1]=voucherId`、`ARGV[2]=userId` 与 Java 调用一致。
+- Redisson 用户-券维度锁真实存在：`lock:order:{voucherId}:{userId}`。
+- MySQL 条件扣库存真实存在：`stock = stock - 1` 且 `stock > 0`。
+- `tb_voucher_order` 唯一索引真实存在：`uk_user_voucher (user_id, voucher_id)`。
+- `CacheClient` 已有 `queryWithPassThrough`、`queryWithMutex`、`queryWithLogicalExpire`。
+- 原 README / 报告仍包含“不引入 Elasticsearch”和秒杀链路 `NOT VERIFIED` 的旧阶段说明。
+- 当前仓库在本轮开始时未接入 Elasticsearch。
 
-## 原项目存在的问题
+## 2. 本轮目标
 
-- 部分核心业务模块缺失或不完整，包括 service、mapper、interceptor、utils、listener 等。
-- 项目命名仍有历史课程痕迹，需要统一为 CityEats。
-- 数据库初始化脚本、Docker 依赖启动方式和测试环境不完整。
-- 秒杀链路缺少完整的 Redis Lua、RabbitMQ 异步消费、事务落库和并发兜底验证。
-- README 容易让人误解为仍是代码子集，需要同步改成当前真实实现状态。
+- 接入 Elasticsearch 7.6.2，用于商户全文搜索。
+- 实现 MySQL 到 Elasticsearch 的全量重建和业务事件增量同步。
+- 引入真实使用的 Strategy、Factory、Chain of Responsibility、Observer/Event。
+- 增强 RabbitMQ 秒杀订单链路：有限重试、DLQ、失败补偿和补偿幂等。
+- 补充测试并保证 Maven 构建通过。
+- 更新 README 和完成报告，使简历描述有真实代码支撑。
 
-## 补齐的模块
+## 3. 修改文件
 
-- 启动入口：`CityEatsApplication`
-- 通用模块：业务异常、MQ 常量、GEO 初始化
-- 配置模块：MVC、MyBatis-Plus、RabbitMQ、Redisson、全局异常处理
-- 拦截器：Token 刷新、登录校验
-- Mapper：用户、商户、商户类型、关注、博客、优惠券、秒杀券、订单等
-- Service：用户登录、商户缓存、GEO 查询、关注 Feed、点赞、签到、秒杀下单
-- Listener：RabbitMQ 秒杀订单消费者
-- Utils：Redis 缓存工具、分布式 ID、用户上下文、正则校验、常量
-
-## 新增文件
-
-- `src/main/java/com/cityeats/CityEatsApplication.java`
-- `src/main/java/com/cityeats/common/BusinessException.java`
-- `src/main/java/com/cityeats/common/MqConstants.java`
-- `src/main/java/com/cityeats/common/GeoShopInitializer.java`
-- `src/main/java/com/cityeats/interceptor/LoginInterceptor.java`
-- `src/main/java/com/cityeats/interceptor/RefreshTokenInterceptor.java`
-- `src/main/java/com/cityeats/listener/VoucherOrderListener.java`
-- `src/main/java/com/cityeats/mapper/*Mapper.java`
-- `src/main/java/com/cityeats/service/I*Service.java`
-- `src/main/java/com/cityeats/service/impl/*ServiceImpl.java`
-- `src/main/java/com/cityeats/utils/*.java`
+- `pom.xml`
+- `docker-compose.yml`
 - `src/main/resources/application.yml`
 - `src/main/resources/application-local.yml.example`
-- `src/main/resources/logback-spring.xml`
-- `src/main/resources/lua/seckill.lua`
-- `sql/schema.sql`
-- `sql/data.sql`
-- `docker-compose.yml`
-- `src/test/resources/application-test.yml`
-- `src/test/resources/schema-h2.sql`
-- `src/test/resources/data-h2.sql`
-- `src/test/java/com/cityeats/**/*Test.java`
+- `src/main/java/com/cityeats/common/MqConstants.java`
+- `src/main/java/com/cityeats/config/QueueConfig.java`
+- `src/main/java/com/cityeats/controller/ShopController.java`
+- `src/main/java/com/cityeats/listener/VoucherOrderListener.java`
+- `src/main/java/com/cityeats/service/IShopService.java`
+- `src/main/java/com/cityeats/service/impl/ShopServiceImpl.java`
+- `src/main/java/com/cityeats/service/impl/VoucherOrderServiceImpl.java`
+- `src/main/java/com/cityeats/utils/RedisConstants.java`
+- `README.md`
+- `COMPLETION_REPORT.md`
 
-## 修改文件
+## 4. 新增文件
 
-- `README.md`：重写为中文工程 README，删除“代码子集/待补齐”旧描述，说明当前真实能力、启动方式、测试方式和阶段边界。
-- `docker-compose.yml`：默认端口改为 13306、16379、5673、15673，减少与本机 MySQL/Redis/RabbitMQ 冲突。
-- `src/main/resources/application.yml`：数据库 URL 增加 `allowPublicKeyRetrieval=true`，适配 MySQL 8 本地连接。
-- `src/main/java/com/cityeats/service/impl/VoucherOrderTransactionalServiceImpl.java`：秒杀订单落库改为字符串字段 QueryWrapper/UpdateWrapper，避免 Java 17 反射限制导致 RabbitMQ Consumer 失败；同时增加 Redisson 用户-券维度锁。
+- `src/main/java/com/cityeats/config/ElasticsearchConfig.java`
+- `src/main/java/com/cityeats/controller/AdminSearchController.java`
+- `src/main/java/com/cityeats/dto/ShopDTO.java`
+- `src/main/java/com/cityeats/dto/ShopSearchRequest.java`
+- `src/main/java/com/cityeats/dto/ShopSearchResponse.java`
+- `src/main/java/com/cityeats/dto/VoucherOrderMessage.java`
+- `src/main/java/com/cityeats/cache/*`
+- `src/main/java/com/cityeats/search/*`
+- `src/main/java/com/cityeats/seckill/*`
+- `src/main/java/com/cityeats/listener/ShopSearchSyncListener.java`
+- `src/main/java/com/cityeats/listener/VoucherOrderDeadLetterListener.java`
+- `src/main/java/com/cityeats/service/VoucherOrderCompensationService.java`
+- `src/main/java/com/cityeats/service/impl/VoucherOrderCompensationServiceImpl.java`
+- `src/main/resources/lua/compensate_seckill.lua`
+- `src/test/java/com/cityeats/cache/*`
+- `src/test/java/com/cityeats/search/*`
+- `src/test/java/com/cityeats/seckill/SeckillValidationChainTest.java`
+- `src/test/java/com/cityeats/service/VoucherOrderCompensationTest.java`
 
-## 删除文件
+## 5. 新增 Maven 依赖
 
-本轮没有主动删除核心业务文件。
+```xml
+<dependency>
+    <groupId>org.elasticsearch.client</groupId>
+    <artifactId>elasticsearch-rest-high-level-client</artifactId>
+    <version>7.6.2</version>
+</dependency>
+```
 
-## 数据库结构变化
+版本选择原因：项目使用 Spring Boot 2.3.12，选择 Elasticsearch 7.6.2 与该生态兼容，避免 ES 8 服务端和 7.x Java 客户端混用。
 
-- 数据库统一为 `cityeats`。
-- 初始化脚本位于 `sql/schema.sql` 和 `sql/data.sql`。
-- 主要表包括：
-  - `tb_user`
-  - `tb_user_info`
-  - `tb_shop_type`
-  - `tb_shop`
-  - `tb_follow`
-  - `tb_blog`
-  - `tb_blog_comments`
-  - `tb_voucher`
-  - `tb_seckill_voucher`
-  - `tb_voucher_order`
-- `tb_voucher_order` 增加 `(user_id, voucher_id)` 唯一索引，用于一人一单最终兜底。
+## 6. Docker Compose 变化
 
-## Redis 使用方式
+- 新增 `elasticsearch:7.6.2` 单节点服务。
+- 默认映射 `19200:9200`。
+- 关闭开发环境安全认证。
+- 新增 ES 持久化 volume 和 healthcheck。
+- MySQL 默认 root 密码改为 `Wjh20050705`。
+- Redis 默认启用 `requirepass Wjh20050705`。
+- 保留 MySQL、Redis、RabbitMQ 原有服务。
 
-- 登录 token：保存用户登录态，拦截器从 Redis 恢复用户上下文。
-- 商户缓存：商户详情使用缓存空值防止缓存穿透。
-- 秒杀库存：Lua 脚本在 Redis 内完成库存判断、重复购买判断和预扣减。
-- 分布式 ID：基于 Redis 自增序列生成订单 ID。
-- 签到：使用 Bitmap 记录每日签到并统计连续签到。
-- 附近商户：使用 GEO 存储商户坐标并按距离查询。
-- Feed 和点赞：使用 ZSet 维护时间顺序和点赞顺序。
-
-## RabbitMQ 使用方式
-
-- 秒杀资格校验通过后，接口线程发送订单消息到 RabbitMQ。
-- `VoucherOrderListener` 异步消费订单消息。
-- 消费端在事务内完成：
-  - 查询是否重复下单
-  - 条件扣减 MySQL 库存
-  - 插入订单记录
-- 消费端失败会记录错误日志，不在接口线程中直接阻塞用户请求。
-
-## 秒杀完整流程
+## 7. Elasticsearch 架构
 
 ```text
-用户请求秒杀
+MySQL tb_shop
   ↓
-校验登录态和秒杀券时间
+ShopSearchConverter
   ↓
-Redis Lua 原子判断库存和一人一单
+ShopDocument
   ↓
-生成订单 ID
+Elasticsearch cityeats_shop
   ↓
-发送 RabbitMQ 消息
-  ↓
-RabbitMQ Consumer 消费
-  ↓
-Redisson 用户-券维度锁
-  ↓
-MySQL 条件扣库存
-  ↓
-插入订单记录
+GET /shop/search
 ```
 
-## 修复的工程问题
+定位：
 
-- 补齐 Spring Boot 启动入口和主配置。
-- 补齐核心业务 Service/Mapper/Listener/Utils。
-- 修复 MySQL 8 本地连接的 public key retrieval 问题。
-- 修复默认 Docker 端口容易和本机服务冲突的问题。
-- 修复 Java 17 下 MyBatis-Plus LambdaWrapper 在异步消费链路中的反射访问问题。
-- 修复 README 与当前代码状态不一致的问题。
-- 增加 `.gitignore`，避免提交 `target/`、日志和本地配置。
+- MySQL = Source of Truth
+- Elasticsearch = Search Index
+- Redis = Cache / GEO / High-concurrency Infrastructure
 
-## 新增测试
+## 8. Elasticsearch 索引结构
 
-- `CityEatsApplicationTests`：验证 Spring Context 和 Mapper 基础查询。
-- `RedisIdWorkerTest`：验证 Redis 分布式 ID 并发唯一性。
-- `CacheClientTest`：验证缓存空值逻辑。
-- `SeckillLuaScriptTest`：验证 Lua 秒杀脚本关键原子逻辑。
-- `VoucherOrderTransactionalServiceTest`：验证事务落库和条件扣库存路径。
-
-## Docker 启动方式
-
-```bash
-docker compose up -d
-```
-
-默认端口：
+索引名：
 
 ```text
-MySQL: 13306
-Redis: 16379
-RabbitMQ: 5673
-RabbitMQ Management: 15673
+cityeats_shop
 ```
 
-当前环境状态：
+核心字段：
+
+- `id`: long
+- `name`: text + keyword
+- `typeId`: long
+- `area`: text + keyword
+- `address`: text
+- `description`: text
+- `avgPrice`: long
+- `score`: integer
+- `sold`: integer
+- `comments`: integer
+- `x`: double
+- `y`: double
+- `openHours`: keyword
+- `createTime`: date
+- `updateTime`: date
+
+## 9. 搜索接口
 
 ```text
-NOT VERIFIED
+GET /shop/search
 ```
 
-原因：本次最终验收时 Docker Desktop daemon 未运行，命令返回无法连接 `dockerDesktopLinuxEngine`。此前曾成功启动过 MySQL、Redis、RabbitMQ 容器并完成接口链路验证，但本报告不把最终环境复验写成 PASS。
+支持：
 
-## Maven 验证
+- keyword 搜索 `name / description / address / area`
+- typeId 精确过滤
+- area 精确过滤
+- minPrice / maxPrice 区间过滤
+- minScore 过滤
+- current / size 分页
+- sort：`score_desc`、`sold_desc`、`avgPrice_asc`、`avgPrice_desc`
 
-### mvn clean test
+返回：
+
+```text
+ShopSearchResponse(records, total, current, size)
+```
+
+## 10. 全量同步流程
+
+接口：
+
+```text
+POST /admin/search/shop/rebuild
+```
+
+流程：
+
+```text
+删除旧索引
+  ↓
+创建 mapping
+  ↓
+分页读取 MySQL 商户
+  ↓
+转换 ShopDocument
+  ↓
+Bulk 写入 ES
+  ↓
+返回同步数量
+```
+
+## 11. 增量同步流程
+
+```text
+ShopServiceImpl.update
+  ↓
+MySQL 更新成功
+  ↓
+删除 Redis 商户缓存
+  ↓
+publishEvent(new ShopChangedEvent(...))
+  ↓
+ShopSearchSyncListener AFTER_COMMIT
+  ↓
+重新读取 MySQL 最新商户
+  ↓
+更新 Elasticsearch 文档
+```
+
+同步失败时记录 ERROR 日志，不回滚已提交的 MySQL 事务。
+
+## 12. 使用的设计模式
+
+- Strategy：缓存查询方案抽象。
+- Factory：从 Spring 容器注册并选择缓存策略。
+- Chain of Responsibility：秒杀前置校验链。
+- Observer/Event：Spring 事件监听完成 ES 增量同步。
+
+## 13. Redis 缓存 Strategy 实现
+
+- `CacheQueryStrategy`
+- `PassThroughCacheStrategy`
+- `MutexCacheStrategy`
+- `LogicalExpireCacheStrategy`
+- `CacheStrategyFactory`
+- `CacheStrategyType`
+
+商户详情 `ShopServiceImpl.queryById` 已通过 `CacheStrategyFactory` 选择策略，默认 `PASS_THROUGH`。
+
+## 14. 秒杀责任链实现
+
+- `SeckillContext`
+- `SeckillValidator`
+- `VoucherExistValidator`
+- `SeckillTimeValidator`
+- `SeckillValidationChain`
+
+责任链只做业务前置校验。Redis Lua 仍负责最终库存判断、库存扣减和一人一单原子校验。
+
+## 15. RabbitMQ Retry
+
+`application.yml` 配置：
+
+```yaml
+spring:
+  rabbitmq:
+    listener:
+      simple:
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 1000
+          multiplier: 2
+          max-interval: 5000
+```
+
+## 16. DLQ
+
+新增常量：
+
+- `VOUCHER_ORDER_DLX`
+- `VOUCHER_ORDER_DLQ`
+- `VOUCHER_ORDER_DLQ_ROUTING_KEY`
+
+`QueueConfig` 中主队列绑定 DLX，死信队列绑定 DLX。
+
+## 17. Redis 补偿机制
+
+新增 `compensate_seckill.lua`：
+
+```text
+如果 seckill:compensated:{orderId} 已存在，直接返回
+否则：
+  seckill:stock:{voucherId} + 1
+  seckill:order:{voucherId} 删除 userId
+  写入补偿标记并设置 TTL
+```
+
+`VoucherOrderDeadLetterListener` 在补偿前按 `orderId` 查询 MySQL；订单已存在时不补偿，避免数据库成功但 Redis 被错误恢复。
+
+## 18. 新增测试
+
+- `ShopSearchConverterTest`
+- `ShopSearchServiceTest`
+- `ShopChangedEventTest`
+- `CacheStrategyFactoryTest`
+- `PassThroughCacheStrategyTest`
+- `SeckillValidationChainTest`
+- `VoucherOrderCompensationTest`
+
+保留并通过原有测试：
+
+- `CityEatsApplicationTests`
+- `SeckillLuaScriptTest`
+- `VoucherOrderTransactionalServiceTest`
+- `CacheClientTest`
+- `RedisIdWorkerTest`
+
+## 19. mvn clean test 结果
 
 ```text
 Confirmed Working
-Tests run: 5, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 15, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
-Finished at: 2026-08-30T13:33:44+08:00
+Finished at: 2026-08-30T21:40:12+08:00
 ```
 
-### mvn clean package
+## 20. mvn clean package 结果
 
 ```text
 Confirmed Working
-Tests run: 5, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 15, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
 Jar: target/cityeats-0.0.1-SNAPSHOT.jar
-Finished at: 2026-08-30T13:34:58+08:00
+Finished at: 2026-08-30T21:41:23+08:00
 ```
 
-## 实际验证过的 API
+## 21. Docker 集成验证结果
 
-以下 API 曾在 Docker 依赖启动成功时完成验证：
+```text
+Not Fully Verified
+```
+
+本轮已尝试：
+
+- `docker version`
+- 启动 Docker Desktop
+- 轮询 Docker daemon
+- `docker ps`
+
+结果：Docker Desktop 进程已启动，但 Docker CLI 连接 `dockerDesktopLinuxEngine` 时挂起或无法获得 daemon 响应，因此未能完成 `docker compose down -v`、`docker compose up -d`、容器 healthcheck、HTTP API 和 RabbitMQ 真链路复验。
+
+## 22. 实际验证 API
+
+本轮由于 Docker daemon 未可用，以下 HTTP API 未能完成最新代码的真实调用验证：
 
 - `POST /user/code`
 - `POST /user/login`
@@ -197,36 +332,48 @@ Finished at: 2026-08-30T13:34:58+08:00
 - `GET /blog/hot`
 - `GET /voucher/list/1`
 - `POST /voucher-order/seckill/1`
+- `POST /admin/search/shop/rebuild`
+- `GET /shop/search`
 
-本轮最终修复了 RabbitMQ Consumer 落库时的 Java 17 LambdaWrapper 反射问题，但由于 Docker daemon 在最终复验阶段不可用，秒杀 MQ 落库链路的最新代码版本标记为：
+这些接口已有真实代码实现和单元/构建验证，但不能在本报告中标记为本轮 Docker 集成 Confirmed Working。
 
-```text
-NOT VERIFIED
-```
+## 23. 当前剩余限制
 
-## 当前仍存在限制
+- Docker daemon 当前不可用，导致 Docker + HTTP API + RabbitMQ 秒杀落库链路未完成本轮真实复验。
+- Elasticsearch 真实容器启动、索引文档数与 MySQL 行数一致性、关键词/typeId/area/分页/排序实际 HTTP 调用仍需在 Docker daemon 恢复后验证。
+- RabbitMQ retry 到 DLQ 的真实 broker 级流转和死信补偿仍需在 Docker daemon 恢复后验证。
+- 本项目未引入 IK 中文分词器，开发环境使用 Elasticsearch 默认 analyzer。
+- 不提供 production profile 下的危险故障触发 API；失败补偿通过单元测试覆盖核心 Lua 调用路径，真实 DLQ 可在开发环境通过让 Consumer 抛异常验证。
 
-- 本阶段没有接入 Actuator、Micrometer、Prometheus、Grafana。
-- 本阶段没有接入 AIOps Sentinel 的真实观测数据闭环。
-- 本阶段没有实现故障注入、chaos profile 或数据库连接池耗尽 Demo。
-- 最终 Docker 依赖和接口联调因为本机 Docker Desktop daemon 未运行，未完成最新代码版本复验。
-- 秒杀链路使用 Redis 预扣减和 MySQL 最终落库，若异步消费失败，需要后续增加补偿机制或可靠消息方案。
+## Confirmed Working
 
-## 验收结论
+- Phase 0 仓库审计完成。
+- Elasticsearch 7.6.2 Java 客户端依赖接入。
+- Docker Compose 已新增 Elasticsearch 服务定义。
+- `ShopDocument` 与 MyBatis `Shop` 分离。
+- `cityeats_shop` mapping 代码存在。
+- `/shop/search` 搜索接口代码存在。
+- `/admin/search/shop/rebuild` 全量重建接口代码存在。
+- `ShopChangedEvent` + `ShopSearchSyncListener` 增量同步代码存在。
+- Strategy + Factory 已真实用于商户详情缓存查询。
+- Responsibility Chain 已真实用于秒杀前置校验。
+- Observer/Event 已真实用于 ES 增量同步。
+- Redis Lua 秒杀最终原子检查未被破坏。
+- RabbitMQ 主队列已配置 DLX / DLQ。
+- RabbitMQ Consumer retry 已配置有限次数。
+- Redis Lua 补偿脚本已新增，并带幂等补偿标记。
+- `mvn clean test` 通过。
+- `mvn clean package` 通过。
+- README 已按真实代码更新。
 
-### Confirmed Working
-
-- 项目可以编译。
-- 项目可以运行单元/集成测试。
-- 项目可以打包生成 Spring Boot Jar。
-- README 已改为中文，并与当前阶段代码能力保持一致。
-- 项目命名已统一为 CityEats。
-- 核心业务模块已补齐。
-- 数据库脚本、Docker Compose、测试配置已补齐。
-
-### Not Fully Verified
+## Not Fully Verified
 
 - Docker Compose 最终复验。
-- 最新代码版本下的完整 HTTP API 联调。
-- 最新代码版本下的 RabbitMQ 秒杀订单落库。
-
+- Spring Boot 连接 Docker MySQL / Redis / RabbitMQ / Elasticsearch 启动复验。
+- 最新代码版本 HTTP API 实际调用。
+- 秒杀 RabbitMQ 从接口到 MySQL 落库的最新链路复验。
+- ES 全量 rebuild 后文档数与 MySQL 行数一致的真实验证。
+- ES keyword/typeId/area/分页/排序真实 HTTP 验证。
+- MySQL 更新后 Event 到 ES 的真实集成验证。
+- RabbitMQ retry 超限进入 DLQ 的真实 broker 验证。
+- DLQ Consumer 触发 Redis 补偿的真实 broker 验证。

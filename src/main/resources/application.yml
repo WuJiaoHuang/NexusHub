@@ -8,14 +8,14 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:cityeats}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&characterEncoding=utf8
     username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:123456}
+    password: ${DB_PASSWORD:Wjh20050705}
     hikari:
       maximum-pool-size: ${DB_POOL_MAX_SIZE:10}
       minimum-idle: ${DB_POOL_MIN_IDLE:2}
   redis:
     host: ${REDIS_HOST:localhost}
     port: ${REDIS_PORT:6379}
-    password: ${REDIS_PASSWORD:}
+    password: ${REDIS_PASSWORD:Wjh20050705}
     database: ${REDIS_DATABASE:0}
     timeout: 3000
   rabbitmq:
@@ -25,10 +25,16 @@ spring:
     password: ${RABBITMQ_PASSWORD:cityeats}
     listener:
       simple:
+        default-requeue-rejected: false
         retry:
           enabled: true
           max-attempts: 3
           initial-interval: 1000
+          multiplier: 2
+          max-interval: 5000
+  elasticsearch:
+    host: ${ELASTICSEARCH_HOST:localhost}
+    port: ${ELASTICSEARCH_PORT:19200}
 
 mybatis-plus:
   type-aliases-package: com.cityeats.entity
@@ -41,3 +47,12 @@ mybatis-plus:
 logging:
   level:
     com.cityeats: info
+
+cityeats:
+  cache:
+    shop-strategy: ${SHOP_CACHE_STRATEGY:PASS_THROUGH}
+  search:
+    shop-index: ${SHOP_SEARCH_INDEX:cityeats_shop}
+    rebuild-batch-size: ${SHOP_SEARCH_REBUILD_BATCH_SIZE:500}
+  seckill:
+    stock-warmup-enabled: ${SECKILL_STOCK_WARMUP_ENABLED:true}

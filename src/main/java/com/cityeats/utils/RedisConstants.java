@@ -19,6 +19,7 @@ public final class RedisConstants {
     public static final String SIGN_KEY = "sign:";
     public static final String SECKILL_STOCK_KEY = "seckill:stock:";
     public static final String SECKILL_ORDER_KEY = "seckill:order:";
+    public static final String SECKILL_COMPENSATED_KEY = "seckill:compensated:";
 
     private RedisConstants() {
     }

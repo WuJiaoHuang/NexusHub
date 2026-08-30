@@ -4,6 +4,7 @@ package com.cityeats.controller;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cityeats.dto.Result;
+import com.cityeats.dto.ShopSearchRequest;
 import com.cityeats.entity.Shop;
 import com.cityeats.service.IShopService;
 import com.cityeats.utils.SystemConstants;
@@ -76,6 +77,11 @@ public class ShopController {
             @RequestParam(value = "y",required = false) Double y
     ) {
         return shopService.queryShopByType(typeId,current,x,y);
+    }
+
+    @GetMapping("/search")
+    public Result search(ShopSearchRequest request) {
+        return shopService.search(request);
     }
 
     /**

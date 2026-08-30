@@ -1,12 +1,16 @@
 package com.cityeats.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.cityeats.common.BusinessException;
 import com.cityeats.common.MqConstants;
+import com.cityeats.dto.VoucherOrderMessage;
 import com.cityeats.dto.Result;
 import com.cityeats.dto.UserDTO;
 import com.cityeats.entity.SeckillVoucher;
 import com.cityeats.entity.VoucherOrder;
 import com.cityeats.mapper.VoucherOrderMapper;
+import com.cityeats.seckill.SeckillContext;
+import com.cityeats.seckill.SeckillValidationChain;
 import com.cityeats.service.ISeckillVoucherService;
 import com.cityeats.service.IVoucherOrderService;
 import com.cityeats.utils.RedisIdWorker;
@@ -38,6 +42,8 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     private RedisIdWorker redisIdWorker;
     @Resource
     private RabbitTemplate rabbitTemplate;
+    @Resource
+    private SeckillValidationChain seckillValidationChain;
 
     @Value("${cityeats.seckill.stock-warmup-enabled:true}")
     private boolean stockWarmupEnabled;
@@ -63,15 +69,15 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
             return Result.fail("请先登录");
         }
         SeckillVoucher voucher = seckillVoucherService.getById(voucherId);
-        if (voucher == null) {
-            return Result.fail("优惠券不存在");
-        }
-        LocalDateTime now = LocalDateTime.now();
-        if (voucher.getBeginTime().isAfter(now)) {
-            return Result.fail("秒杀尚未开始");
-        }
-        if (voucher.getEndTime().isBefore(now)) {
-            return Result.fail("秒杀已经结束");
+        SeckillContext context = new SeckillContext();
+        context.setVoucherId(voucherId);
+        context.setUserId(user.getId());
+        context.setNow(LocalDateTime.now());
+        context.setSeckillVoucher(voucher);
+        try {
+            seckillValidationChain.validate(context);
+        } catch (BusinessException e) {
+            return Result.fail(e.getMessage());
         }
         long orderId = redisIdWorker.nextId("order");
         Long result = stringRedisTemplate.execute(SECKILL_SCRIPT, Collections.emptyList(),
@@ -80,10 +86,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
             int r = result == null ? -1 : result.intValue();
             return Result.fail(r == 1 ? "库存不足" : "不能重复下单");
         }
-        VoucherOrder order = new VoucherOrder();
-        order.setId(orderId);
-        order.setUserId(user.getId());
-        order.setVoucherId(voucherId);
+        VoucherOrderMessage order = new VoucherOrderMessage(orderId, user.getId(), voucherId, LocalDateTime.now());
         rabbitTemplate.convertAndSend(MqConstants.VOUCHER_ORDER_EXCHANGE, MqConstants.VOUCHER_ORDER_ROUTING_KEY, order);
         log.info("秒杀资格校验通过，订单消息已发送，orderId={}, voucherId={}, userId={}", orderId, voucherId, user.getId());
         return Result.ok(orderId);

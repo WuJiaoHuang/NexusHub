@@ -3,7 +3,7 @@ services:
     image: mysql:8.0
     container_name: cityeats-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-Wjh20050705}
       MYSQL_DATABASE: cityeats
       TZ: Asia/Shanghai
     ports:
@@ -13,7 +13,7 @@ services:
       - ./sql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
       - ./sql/data.sql:/docker-entrypoint-initdb.d/02-data.sql:ro
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p123456"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -21,12 +21,15 @@ services:
   redis:
     image: redis:6.2
     container_name: cityeats-redis
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-Wjh20050705}
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-Wjh20050705}
     ports:
       - "${REDIS_PORT:-16379}:6379"
     volumes:
       - cityeats-redis-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a $${REDIS_PASSWORD:-Wjh20050705} ping | grep PONG"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -48,7 +51,26 @@ services:
       timeout: 5s
       retries: 10
 
+  elasticsearch:
+    image: elasticsearch:7.6.2
+    container_name: cityeats-elasticsearch
+    environment:
+      discovery.type: single-node
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+      xpack.security.enabled: "false"
+      TZ: Asia/Shanghai
+    ports:
+      - "${ELASTICSEARCH_PORT:-19200}:9200"
+    volumes:
+      - cityeats-elasticsearch-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health | grep -E 'green|yellow'"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
 volumes:
   cityeats-mysql-data:
   cityeats-redis-data:
   cityeats-rabbitmq-data:
+  cityeats-elasticsearch-data:

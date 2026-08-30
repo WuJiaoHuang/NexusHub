@@ -3,11 +3,16 @@ package com.cityeats.service.impl;
 import cn.hutool.core.collection.CollUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.cityeats.cache.CacheStrategyFactory;
+import com.cityeats.cache.CacheStrategyType;
 import com.cityeats.dto.Result;
+import com.cityeats.dto.ShopSearchRequest;
 import com.cityeats.entity.Shop;
 import com.cityeats.mapper.ShopMapper;
+import com.cityeats.search.ShopChangedEvent;
+import com.cityeats.search.ShopChangeType;
+import com.cityeats.search.ShopSearchService;
 import com.cityeats.service.IShopService;
-import com.cityeats.utils.CacheClient;
 import com.cityeats.utils.RedisConstants;
 import com.cityeats.utils.SystemConstants;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +24,8 @@ import org.springframework.data.geo.Metrics;
 import org.springframework.data.geo.Point;
 import org.springframework.data.redis.connection.RedisGeoCommands;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,13 +42,20 @@ import java.util.stream.Collectors;
 public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IShopService {
 
     @Resource
-    private CacheClient cacheClient;
+    private CacheStrategyFactory cacheStrategyFactory;
     @Resource
     private StringRedisTemplate stringRedisTemplate;
+    @Resource
+    private ShopSearchService shopSearchService;
+    @Resource
+    private ApplicationEventPublisher eventPublisher;
+
+    @Value("${cityeats.cache.shop-strategy:PASS_THROUGH}")
+    private CacheStrategyType shopCacheStrategy;
 
     @Override
     public Result queryById(Long id) {
-        Shop shop = cacheClient.queryWithPassThrough(RedisConstants.CACHE_SHOP_KEY, id, Shop.class,
+        Shop shop = cacheStrategyFactory.get(shopCacheStrategy).query(RedisConstants.CACHE_SHOP_KEY, id, Shop.class,
                 this::getById, RedisConstants.CACHE_SHOP_TTL, TimeUnit.MINUTES);
         if (shop == null) {
             return Result.fail("商户不存在");
@@ -55,9 +69,22 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
         if (shop.getId() == null) {
             return Result.fail("商户 id 不能为空");
         }
-        updateById(shop);
+        boolean updated = updateById(shop);
         stringRedisTemplate.delete(RedisConstants.CACHE_SHOP_KEY + shop.getId());
+        if (updated) {
+            eventPublisher.publishEvent(new ShopChangedEvent(shop.getId(), ShopChangeType.UPDATED));
+        }
         return Result.ok();
+    }
+
+    @Override
+    public Result search(ShopSearchRequest request) {
+        try {
+            return Result.ok(shopSearchService.search(request));
+        } catch (Exception e) {
+            log.error("商户搜索失败，request={}", request, e);
+            return Result.fail("商户搜索失败");
+        }
     }
 
     @Override
