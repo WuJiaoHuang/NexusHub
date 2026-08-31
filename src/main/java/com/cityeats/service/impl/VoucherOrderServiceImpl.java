@@ -14,6 +14,7 @@ import com.cityeats.seckill.SeckillValidationChain;
 import com.cityeats.service.ISeckillVoucherService;
 import com.cityeats.service.IVoucherOrderService;
 import com.cityeats.utils.RedisIdWorker;
+import com.cityeats.utils.RedisConstants;
 import com.cityeats.utils.UserHolder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -59,7 +60,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
             return;
         }
         seckillVoucherService.list().forEach(voucher ->
-                stringRedisTemplate.opsForValue().set("seckill:stock:" + voucher.getVoucherId(), String.valueOf(voucher.getStock())));
+                stringRedisTemplate.opsForValue().set(RedisConstants.SECKILL_STOCK_KEY + voucher.getVoucherId(), String.valueOf(voucher.getStock())));
     }
 
     @Override

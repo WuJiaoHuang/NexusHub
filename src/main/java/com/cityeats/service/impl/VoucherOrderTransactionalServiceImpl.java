@@ -2,6 +2,7 @@ package com.cityeats.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
+import com.cityeats.common.BusinessException;
 import com.cityeats.entity.VoucherOrder;
 import com.cityeats.mapper.SeckillVoucherMapper;
 import com.cityeats.mapper.VoucherOrderMapper;
@@ -71,7 +72,7 @@ public class VoucherOrderTransactionalServiceImpl implements IVoucherOrderTransa
                         .gt("stock", 0));
         if (updated == 0) {
             log.warn("库存不足，订单落库终止，voucherId={}", voucherOrder.getVoucherId());
-            return;
+            throw new BusinessException("优惠券库存不足");
         }
         voucherOrder.setStatus(1);
         voucherOrder.setCreateTime(LocalDateTime.now());

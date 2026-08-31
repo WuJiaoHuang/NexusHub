@@ -1,4 +1,5 @@
 USE cityeats;
+SET NAMES utf8mb4;
 
 INSERT INTO tb_user (id, phone, nick_name, icon) VALUES
 (1, '13800000001', 'CityEats用户1', ''),

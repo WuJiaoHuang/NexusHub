@@ -2,4 +2,8 @@ target/
 logs/
 *.log
 .idea/
+.vscode/
 *.iml
+.env
+.env.*
+application-local.yml

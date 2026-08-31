@@ -3,7 +3,7 @@ services:
     image: mysql:8.0
     container_name: cityeats-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-Wjh20050705}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-cityeats_dev}
       MYSQL_DATABASE: cityeats
       TZ: Asia/Shanghai
     ports:
@@ -22,14 +22,14 @@ services:
     image: redis:6.2
     container_name: cityeats-redis
     environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-Wjh20050705}
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-Wjh20050705}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-cityeats_dev}
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-cityeats_dev}
     ports:
       - "${REDIS_PORT:-16379}:6379"
     volumes:
       - cityeats-redis-data:/data
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a $${REDIS_PASSWORD:-Wjh20050705} ping | grep PONG"]
+      test: ["CMD-SHELL", "redis-cli -a $${REDIS_PASSWORD:-cityeats_dev} ping | grep PONG"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -39,7 +39,7 @@ services:
     container_name: cityeats-rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: cityeats
-      RABBITMQ_DEFAULT_PASS: cityeats
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-cityeats_dev}
     ports:
       - "${RABBITMQ_PORT:-5673}:5672"
       - "${RABBITMQ_MANAGEMENT_PORT:-15673}:15672"
