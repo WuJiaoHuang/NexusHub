@@ -385,19 +385,3 @@ mvn clean package
 - VoucherOrder 事务落库的条件扣库存路径
 - VoucherOrderCompensation Redis Lua 补偿调用
 
-## Interview Highlights
-
-1. Redis 缓存穿透 / 击穿 / 逻辑过期：`CacheClient` 保留三种缓存治理方法，并由策略类复用原逻辑。
-2. Strategy + Factory 管理缓存策略：`ShopServiceImpl.queryById` 通过 `CacheStrategyFactory` 选择商户缓存查询策略。
-3. Redis Lua 秒杀原子校验：`seckill.lua` 在 Redis 内完成库存判断、重复购买判断和预扣减。
-4. Redisson 分布式锁：异步落库时按用户和券维度加锁，降低重复消费和并发写入风险。
-5. RabbitMQ 异步削峰：秒杀资格通过后发送 `VoucherOrderMessage`，订单创建由 Consumer 异步处理。
-6. RabbitMQ Retry + DLQ：Consumer 有限重试，失败后进入死信队列，不做无限 requeue。
-7. Redis Lua 幂等补偿：`compensate_seckill.lua` 使用补偿标记保证重复死信不会多次恢复库存。
-8. Elasticsearch 全文搜索：`cityeats_shop` 索引支持商户关键词、多条件筛选、分页和排序。
-9. MySQL -> Elasticsearch 最终一致同步：商户更新后发布事件，事务提交后监听器同步 ES。
-10. GEO / Bitmap / ZSet：附近商户、签到、Feed 和点赞分别使用 Redis 对应数据结构实现。
-
-## Current Limitations
-
-本项目不引入 Doris、Agent、AIOps、Prometheus、Grafana、Actuator、Micrometer、Flink、RocketMQ、Kafka、微服务拆分或分库分表。当前增强重点是后端业务闭环、Elasticsearch 商户搜索、自然设计模式、RabbitMQ 可靠性和可验证测试。
