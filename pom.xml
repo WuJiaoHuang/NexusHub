@@ -8,10 +8,10 @@
         <version>2.3.12.RELEASE</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
-    <groupId>com.cityeats</groupId>
-    <artifactId>cityeats</artifactId>
+    <groupId>com.campuslink</groupId>
+    <artifactId>campuslink</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>CityEats</name>
+    <name>CampusLink</name>
     <description>本地生活高并发后端服务平台</description>
     <properties>
         <java.version>1.8</java.version>
@@ -54,6 +54,7 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
+            <version>1.18.46</version>
             <optional>true</optional>
         </dependency>
         <dependency>
@@ -130,3 +131,5 @@
     </build>
 
 </project>
+
+

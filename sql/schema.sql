@@ -1,14 +1,15 @@
-CREATE DATABASE IF NOT EXISTS cityeats DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE cityeats;
+CREATE DATABASE IF NOT EXISTS campuslink DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE campuslink;
 
-DROP TABLE IF EXISTS tb_voucher_order;
-DROP TABLE IF EXISTS tb_seckill_voucher;
-DROP TABLE IF EXISTS tb_voucher;
-DROP TABLE IF EXISTS tb_blog_comments;
-DROP TABLE IF EXISTS tb_blog;
+DROP TABLE IF EXISTS event_registration;
+DROP TABLE IF EXISTS event_capacity;
+DROP TABLE IF EXISTS campus_event;
+DROP TABLE IF EXISTS user_interest;
+DROP TABLE IF EXISTS campus_post_comments;
+DROP TABLE IF EXISTS campus_post;
 DROP TABLE IF EXISTS tb_follow;
-DROP TABLE IF EXISTS tb_shop;
-DROP TABLE IF EXISTS tb_shop_type;
+DROP TABLE IF EXISTS campus_place;
+DROP TABLE IF EXISTS place_category;
 DROP TABLE IF EXISTS tb_user_info;
 DROP TABLE IF EXISTS tb_user;
 
@@ -36,7 +37,16 @@ CREATE TABLE tb_user_info (
   update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE tb_shop_type (
+CREATE TABLE user_interest (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT NOT NULL,
+  tag VARCHAR(64) NOT NULL,
+  create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_user_interest (user_id, tag),
+  INDEX idx_user_interest_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE place_category (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   name VARCHAR(64) NOT NULL,
   icon VARCHAR(255),
@@ -45,10 +55,10 @@ CREATE TABLE tb_shop_type (
   update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE tb_shop (
+CREATE TABLE campus_place (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   name VARCHAR(128) NOT NULL,
-  type_id BIGINT NOT NULL,
+  category_id BIGINT NOT NULL,
   images VARCHAR(1024),
   area VARCHAR(64),
   address VARCHAR(255),
@@ -61,7 +71,7 @@ CREATE TABLE tb_shop (
   open_hours VARCHAR(64),
   create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
   update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  INDEX idx_shop_type (type_id)
+  INDEX idx_place_category (category_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE tb_follow (
@@ -72,9 +82,9 @@ CREATE TABLE tb_follow (
   UNIQUE KEY uk_follow (user_id, follow_user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE tb_blog (
+CREATE TABLE campus_post (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
-  shop_id BIGINT,
+  place_id BIGINT NULL,
   user_id BIGINT NOT NULL,
   title VARCHAR(128) NOT NULL,
   images VARCHAR(1024),
@@ -83,57 +93,65 @@ CREATE TABLE tb_blog (
   comments INT DEFAULT 0,
   create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
   update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  INDEX idx_blog_user (user_id),
-  INDEX idx_blog_liked (liked)
+  INDEX idx_post_user (user_id),
+  INDEX idx_post_liked (liked),
+  INDEX idx_post_place (place_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE tb_blog_comments (
+CREATE TABLE campus_post_comments (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   user_id BIGINT NOT NULL,
-  blog_id BIGINT NOT NULL,
+  post_id BIGINT NOT NULL,
   parent_id BIGINT DEFAULT 0,
   answer_id BIGINT DEFAULT 0,
   content VARCHAR(512) NOT NULL,
   liked INT DEFAULT 0,
   status TINYINT(1) DEFAULT 0,
   create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-  update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_comment_post (post_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE tb_voucher (
+CREATE TABLE campus_event (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
-  shop_id BIGINT NOT NULL,
+  place_id BIGINT NULL,
   title VARCHAR(128) NOT NULL,
-  sub_title VARCHAR(255),
-  rules VARCHAR(1024),
-  pay_value BIGINT NOT NULL,
-  actual_value BIGINT NOT NULL,
-  type INT DEFAULT 0,
+  description VARCHAR(1024),
+  category VARCHAR(64),
+  location VARCHAR(255),
+  cover VARCHAR(255),
+  tags VARCHAR(255),
+  start_time DATETIME,
+  end_time DATETIME,
+  registration_start_time DATETIME,
+  registration_end_time DATETIME,
+  capacity INT DEFAULT 0,
+  remaining_slots INT DEFAULT 0,
   status INT DEFAULT 1,
   create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
   update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  INDEX idx_voucher_shop (shop_id)
+  INDEX idx_event_place (place_id),
+  INDEX idx_event_category (category),
+  INDEX idx_event_remaining_slots (remaining_slots)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE tb_seckill_voucher (
-  voucher_id BIGINT PRIMARY KEY,
-  stock INT NOT NULL,
+CREATE TABLE event_capacity (
+  event_id BIGINT PRIMARY KEY,
+  remaining_slots INT NOT NULL,
+  registration_start_time DATETIME NOT NULL,
+  registration_end_time DATETIME NOT NULL,
   create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-  begin_time DATETIME NOT NULL,
-  end_time DATETIME NOT NULL,
   update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE tb_voucher_order (
+CREATE TABLE event_registration (
   id BIGINT PRIMARY KEY,
   user_id BIGINT NOT NULL,
-  voucher_id BIGINT NOT NULL,
-  pay_type INT DEFAULT 1,
+  event_id BIGINT NOT NULL,
   status INT DEFAULT 1,
   create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-  pay_time DATETIME NULL,
-  use_time DATETIME NULL,
-  refund_time DATETIME NULL,
   update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  UNIQUE KEY uk_user_voucher (user_id, voucher_id)
+  UNIQUE KEY uk_user_event (user_id, event_id),
+  INDEX idx_registration_user (user_id),
+  INDEX idx_registration_event (event_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

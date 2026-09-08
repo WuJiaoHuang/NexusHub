@@ -1,0 +1,16 @@
+local eventId = ARGV[1]
+local userId = ARGV[2]
+local stockKey = 'event:slots:' .. eventId
+local orderKey = 'event:registration:' .. eventId
+
+if tonumber(redis.call('get', stockKey) or '0') <= 0 then
+    return 1
+end
+
+if redis.call('sismember', orderKey, userId) == 1 then
+    return 2
+end
+
+redis.call('incrby', stockKey, -1)
+redis.call('sadd', orderKey, userId)
+return 0

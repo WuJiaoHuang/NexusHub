@@ -3,26 +3,26 @@ server:
 
 spring:
   application:
-    name: CityEats
+    name: CampusLink
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:cityeats}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf8&characterSetResults=utf8
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:campuslink}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf8&characterSetResults=utf8
     username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:cityeats_dev}
+    password: ${DB_PASSWORD:campuslink_dev}
     hikari:
       maximum-pool-size: ${DB_POOL_MAX_SIZE:10}
       minimum-idle: ${DB_POOL_MIN_IDLE:2}
   redis:
     host: ${REDIS_HOST:localhost}
     port: ${REDIS_PORT:6379}
-    password: ${REDIS_PASSWORD:cityeats_dev}
+    password: ${REDIS_PASSWORD:campuslink_dev}
     database: ${REDIS_DATABASE:0}
     timeout: 3000
   rabbitmq:
     host: ${RABBITMQ_HOST:localhost}
     port: ${RABBITMQ_PORT:5672}
-    username: ${RABBITMQ_USERNAME:cityeats}
-    password: ${RABBITMQ_PASSWORD:cityeats_dev}
+    username: ${RABBITMQ_USERNAME:campuslink}
+    password: ${RABBITMQ_PASSWORD:campuslink_dev}
     listener:
       simple:
         default-requeue-rejected: false
@@ -37,7 +37,7 @@ spring:
     port: ${ELASTICSEARCH_PORT:19200}
 
 mybatis-plus:
-  type-aliases-package: com.cityeats.entity
+  type-aliases-package: com.campuslink.entity
   configuration:
     map-underscore-to-camel-case: true
   global-config:
@@ -46,13 +46,14 @@ mybatis-plus:
 
 logging:
   level:
-    com.cityeats: info
+    com.campuslink: info
 
-cityeats:
+campuslink:
   cache:
-    shop-strategy: ${SHOP_CACHE_STRATEGY:PASS_THROUGH}
+    place-strategy: ${PLACE_CACHE_STRATEGY:PASS_THROUGH}
   search:
-    shop-index: ${SHOP_SEARCH_INDEX:cityeats_shop}
-    rebuild-batch-size: ${SHOP_SEARCH_REBUILD_BATCH_SIZE:500}
-  seckill:
-    stock-warmup-enabled: ${SECKILL_STOCK_WARMUP_ENABLED:true}
+    place-index: ${PLACE_SEARCH_INDEX:campuslink_place}
+    rebuild-batch-size: ${PLACE_SEARCH_REBUILD_BATCH_SIZE:500}
+  registration:
+    slots-warmup-enabled: ${EVENT_SLOTS_WARMUP_ENABLED:true}
+

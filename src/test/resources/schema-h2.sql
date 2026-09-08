@@ -1,11 +1,12 @@
-DROP TABLE IF EXISTS tb_voucher_order;
-DROP TABLE IF EXISTS tb_seckill_voucher;
-DROP TABLE IF EXISTS tb_voucher;
-DROP TABLE IF EXISTS tb_blog_comments;
-DROP TABLE IF EXISTS tb_blog;
+DROP TABLE IF EXISTS event_registration;
+DROP TABLE IF EXISTS event_capacity;
+DROP TABLE IF EXISTS campus_event;
+DROP TABLE IF EXISTS user_interest;
+DROP TABLE IF EXISTS campus_post_comments;
+DROP TABLE IF EXISTS campus_post;
 DROP TABLE IF EXISTS tb_follow;
-DROP TABLE IF EXISTS tb_shop;
-DROP TABLE IF EXISTS tb_shop_type;
+DROP TABLE IF EXISTS campus_place;
+DROP TABLE IF EXISTS place_category;
 DROP TABLE IF EXISTS tb_user_info;
 DROP TABLE IF EXISTS tb_user;
 
@@ -14,119 +15,140 @@ CREATE TABLE tb_user (
   phone VARCHAR(20) NOT NULL UNIQUE,
   password VARCHAR(128),
   nick_name VARCHAR(64) NOT NULL,
-  icon VARCHAR(255),
-  create_time TIMESTAMP,
-  update_time TIMESTAMP
-);
+  icon VARCHAR(255) DEFAULT '',
+  create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME DEFAULT CURRENT_TIMESTAMP
+) ;
 
 CREATE TABLE tb_user_info (
   user_id BIGINT PRIMARY KEY,
   city VARCHAR(64),
   introduce VARCHAR(128),
-  fans INT,
-  followee INT,
-  gender BOOLEAN,
+  fans INT DEFAULT 0,
+  followee INT DEFAULT 0,
+  gender TINYINT(1),
   birthday DATE,
-  credits INT,
-  level BOOLEAN,
-  create_time TIMESTAMP,
-  update_time TIMESTAMP
-);
+  credits INT DEFAULT 0,
+  level TINYINT(1) DEFAULT 0,
+  create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME DEFAULT CURRENT_TIMESTAMP
+) ;
 
-CREATE TABLE tb_shop_type (
+CREATE TABLE user_interest (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT NOT NULL,
+  tag VARCHAR(64) NOT NULL,
+  create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_user_interest (user_id, tag),
+  INDEX idx_user_interest_user (user_id)
+) ;
+
+CREATE TABLE place_category (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(64) NOT NULL,
   icon VARCHAR(255),
-  sort INT,
-  create_time TIMESTAMP,
-  update_time TIMESTAMP
-);
+  sort INT DEFAULT 0,
+  create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME DEFAULT CURRENT_TIMESTAMP
+) ;
 
-CREATE TABLE tb_shop (
+CREATE TABLE campus_place (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(128) NOT NULL,
-  type_id BIGINT NOT NULL,
+  category_id BIGINT NOT NULL,
   images VARCHAR(1024),
   area VARCHAR(64),
   address VARCHAR(255),
   x DOUBLE,
   y DOUBLE,
-  avg_price BIGINT,
-  sold INT,
-  comments INT,
-  score INT,
+  avg_price BIGINT DEFAULT 0,
+  sold INT DEFAULT 0,
+  comments INT DEFAULT 0,
+  score INT DEFAULT 0,
   open_hours VARCHAR(64),
-  create_time TIMESTAMP,
-  update_time TIMESTAMP
-);
+  create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_place_category (category_id)
+) ;
 
 CREATE TABLE tb_follow (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   user_id BIGINT NOT NULL,
   follow_user_id BIGINT NOT NULL,
-  create_time TIMESTAMP,
-  UNIQUE(user_id, follow_user_id)
-);
+  create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_follow (user_id, follow_user_id)
+) ;
 
-CREATE TABLE tb_blog (
+CREATE TABLE campus_post (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
-  shop_id BIGINT,
+  place_id BIGINT NULL,
   user_id BIGINT NOT NULL,
   title VARCHAR(128) NOT NULL,
   images VARCHAR(1024),
-  content CLOB,
-  liked INT,
-  comments INT,
-  create_time TIMESTAMP,
-  update_time TIMESTAMP
-);
+  content TEXT,
+  liked INT DEFAULT 0,
+  comments INT DEFAULT 0,
+  create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_post_user (user_id),
+  INDEX idx_post_liked (liked),
+  INDEX idx_post_place (place_id)
+) ;
 
-CREATE TABLE tb_blog_comments (
+CREATE TABLE campus_post_comments (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   user_id BIGINT NOT NULL,
-  blog_id BIGINT NOT NULL,
-  parent_id BIGINT,
-  answer_id BIGINT,
-  content VARCHAR(512),
-  liked INT,
-  status BOOLEAN,
-  create_time TIMESTAMP,
-  update_time TIMESTAMP
-);
+  post_id BIGINT NOT NULL,
+  parent_id BIGINT DEFAULT 0,
+  answer_id BIGINT DEFAULT 0,
+  content VARCHAR(512) NOT NULL,
+  liked INT DEFAULT 0,
+  status TINYINT(1) DEFAULT 0,
+  create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_comment_post (post_id)
+) ;
 
-CREATE TABLE tb_voucher (
+CREATE TABLE campus_event (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
-  shop_id BIGINT NOT NULL,
+  place_id BIGINT NULL,
   title VARCHAR(128) NOT NULL,
-  sub_title VARCHAR(255),
-  rules VARCHAR(1024),
-  pay_value BIGINT NOT NULL,
-  actual_value BIGINT NOT NULL,
-  type INT,
-  status INT,
-  create_time TIMESTAMP,
-  update_time TIMESTAMP
-);
+  description VARCHAR(1024),
+  category VARCHAR(64),
+  location VARCHAR(255),
+  cover VARCHAR(255),
+  tags VARCHAR(255),
+  start_time DATETIME,
+  end_time DATETIME,
+  registration_start_time DATETIME,
+  registration_end_time DATETIME,
+  capacity INT DEFAULT 0,
+  remaining_slots INT DEFAULT 0,
+  status INT DEFAULT 1,
+  create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_event_place (place_id),
+  INDEX idx_event_category (category),
+  INDEX idx_event_remaining_slots (remaining_slots)
+) ;
 
-CREATE TABLE tb_seckill_voucher (
-  voucher_id BIGINT PRIMARY KEY,
-  stock INT NOT NULL,
-  create_time TIMESTAMP,
-  begin_time TIMESTAMP NOT NULL,
-  end_time TIMESTAMP NOT NULL,
-  update_time TIMESTAMP
-);
+CREATE TABLE event_capacity (
+  event_id BIGINT PRIMARY KEY,
+  remaining_slots INT NOT NULL,
+  registration_start_time DATETIME NOT NULL,
+  registration_end_time DATETIME NOT NULL,
+  create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME DEFAULT CURRENT_TIMESTAMP
+) ;
 
-CREATE TABLE tb_voucher_order (
+CREATE TABLE event_registration (
   id BIGINT PRIMARY KEY,
   user_id BIGINT NOT NULL,
-  voucher_id BIGINT NOT NULL,
-  pay_type INT,
-  status INT,
-  create_time TIMESTAMP,
-  pay_time TIMESTAMP,
-  use_time TIMESTAMP,
-  refund_time TIMESTAMP,
-  update_time TIMESTAMP,
-  UNIQUE(user_id, voucher_id)
-);
+  event_id BIGINT NOT NULL,
+  status INT DEFAULT 1,
+  create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_user_event (user_id, event_id),
+  INDEX idx_registration_user (user_id),
+  INDEX idx_registration_event (event_id)
+) ;
