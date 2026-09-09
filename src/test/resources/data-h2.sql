@@ -29,12 +29,13 @@ INSERT INTO campus_post (id, place_id, user_id, title, images, content, liked, c
 (1, 2, 1, '图书馆三楼安静角落推荐', '/posts/library.png', '靠窗区域插座多，适合下午复习。', 10, 0),
 (2, NULL, 2, '摄影社秋季采风报名体验', '/posts/photo.png', '路线安排紧凑，适合想认识同好的人。', 8, 0);
 
-INSERT INTO campus_event (id, place_id, title, description, category, location, cover, tags, start_time, end_time, registration_start_time, registration_end_time, capacity, remaining_slots, status) VALUES
-(1, 4, 'Java 后端技术分享会', '围绕 Spring Boot、Redis 和高并发实践展开的校园技术分享。', '技术讲座', '创新实验室 201', '/events/java.png', 'Java,后端,Redis', DATEADD('DAY', 3, CURRENT_TIMESTAMP), DATEADD('HOUR', 74, CURRENT_TIMESTAMP), DATEADD('DAY', -1, CURRENT_TIMESTAMP), DATEADD('DAY', 2, CURRENT_TIMESTAMP), 100, 100, 1),
-(2, 3, '校园篮球联赛', '面向全校学生的 3v3 篮球赛。', '体育赛事', '综合体育馆', '/events/basketball.png', '篮球,体育', DATEADD('DAY', 7, CURRENT_TIMESTAMP), DATEADD('HOUR', 172, CURRENT_TIMESTAMP), DATEADD('DAY', -1, CURRENT_TIMESTAMP), DATEADD('DAY', 5, CURRENT_TIMESTAMP), 60, 60, 1),
-(3, 2, '人工智能学术讲座', '介绍大模型应用、科研方法与校园创新项目。', '学术讲座', '图书馆报告厅', '/events/ai.png', 'AI,科研,读书', DATEADD('DAY', 5, CURRENT_TIMESTAMP), DATEADD('HOUR', 122, CURRENT_TIMESTAMP), DATEADD('DAY', -1, CURRENT_TIMESTAMP), DATEADD('DAY', 4, CURRENT_TIMESTAMP), 120, 120, 1);
+INSERT INTO campus_event (id, place_id, title, description, category, location, cover, tags, start_time, end_time, registration_start_time, registration_end_time, capacity, status) VALUES
+(1, 4, 'Java 后端技术分享会', '围绕 Spring Boot、Redis 和高并发实践展开的校园技术分享。', '技术讲座', '创新实验室 201', '/events/java.png', 'Java,后端,Redis', DATEADD('DAY', 3, CURRENT_TIMESTAMP), DATEADD('HOUR', 74, CURRENT_TIMESTAMP), DATEADD('DAY', -1, CURRENT_TIMESTAMP), DATEADD('DAY', 2, CURRENT_TIMESTAMP), 100, 1),
+(2, 3, '校园篮球联赛', '面向全校学生的 3v3 篮球赛。', '体育赛事', '综合体育馆', '/events/basketball.png', '篮球,体育', DATEADD('DAY', 7, CURRENT_TIMESTAMP), DATEADD('HOUR', 172, CURRENT_TIMESTAMP), DATEADD('DAY', -1, CURRENT_TIMESTAMP), DATEADD('DAY', 5, CURRENT_TIMESTAMP), 60, 1),
+(3, 2, '人工智能学术讲座', '介绍大模型应用、科研方法与校园创新项目。', '学术讲座', '图书馆报告厅', '/events/ai.png', 'AI,科研,读书', DATEADD('DAY', 5, CURRENT_TIMESTAMP), DATEADD('HOUR', 122, CURRENT_TIMESTAMP), DATEADD('DAY', -1, CURRENT_TIMESTAMP), DATEADD('DAY', 4, CURRENT_TIMESTAMP), 120, 1);
 
 INSERT INTO event_capacity (event_id, remaining_slots, registration_start_time, registration_end_time) VALUES
 (1, 100, DATEADD('DAY', -1, CURRENT_TIMESTAMP), DATEADD('DAY', 2, CURRENT_TIMESTAMP)),
 (2, 60, DATEADD('DAY', -1, CURRENT_TIMESTAMP), DATEADD('DAY', 5, CURRENT_TIMESTAMP)),
 (3, 120, DATEADD('DAY', -1, CURRENT_TIMESTAMP), DATEADD('DAY', 4, CURRENT_TIMESTAMP));
+

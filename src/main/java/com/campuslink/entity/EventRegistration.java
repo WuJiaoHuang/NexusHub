@@ -22,11 +22,7 @@ public class EventRegistration implements Serializable {
     private Long id;
     private Long userId;
     private Long eventId;
-    private Integer payType;
     private Integer status;
     private LocalDateTime createTime;
-    private LocalDateTime payTime;
-    private LocalDateTime useTime;
-    private LocalDateTime refundTime;
     private LocalDateTime updateTime;
 }

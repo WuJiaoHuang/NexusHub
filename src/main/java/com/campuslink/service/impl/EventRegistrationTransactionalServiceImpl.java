@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.campuslink.common.BusinessException;
 import com.campuslink.entity.EventRegistration;
-import com.campuslink.mapper.CampusEventMapper;
 import com.campuslink.mapper.EventCapacityMapper;
 import com.campuslink.mapper.EventRegistrationMapper;
 import com.campuslink.service.IEventRegistrationTransactionalService;
@@ -28,8 +27,6 @@ public class EventRegistrationTransactionalServiceImpl implements IEventRegistra
     private EventRegistrationMapper eventRegistrationMapper;
     @Resource
     private EventCapacityMapper eventCapacityMapper;
-    @Resource
-    private CampusEventMapper campusEventMapper;
     @Autowired(required = false)
     private RedissonClient redissonClient;
 
@@ -68,27 +65,25 @@ public class EventRegistrationTransactionalServiceImpl implements IEventRegistra
             log.warn("重复报名被数据库事务拦截，userId={}, eventId={}", eventRegistration.getUserId(), eventRegistration.getEventId());
             return;
         }
+        eventRegistration.setStatus(1);
+        eventRegistration.setCreateTime(LocalDateTime.now());
+        eventRegistration.setUpdateTime(LocalDateTime.now());
+        try {
+            eventRegistrationMapper.insert(eventRegistration);
+        } catch (DuplicateKeyException e) {
+            log.warn("唯一索引拦截重复报名，eventId={}, userId={}", eventRegistration.getEventId(), eventRegistration.getUserId());
+            throw e;
+        }
         int updated = eventCapacityMapper.update(null,
                 new UpdateWrapper<com.campuslink.entity.EventCapacity>()
                         .setSql("remaining_slots = remaining_slots - 1")
                         .eq("event_id", eventRegistration.getEventId())
                         .gt("remaining_slots", 0));
         if (updated == 0) {
-            log.warn("剩余名额不足，报名落库终止，eventId={}", eventRegistration.getEventId());
+            log.warn("剩余名额不足，报名落库回滚，eventId={}", eventRegistration.getEventId());
             throw new BusinessException("校园活动剩余名额不足");
         }
-        campusEventMapper.update(null, new UpdateWrapper<com.campuslink.entity.CampusEvent>()
-                .setSql("remaining_slots = remaining_slots - 1")
-                .eq("id", eventRegistration.getEventId())
-                .gt("remaining_slots", 0));
-        eventRegistration.setStatus(1);
-        eventRegistration.setCreateTime(LocalDateTime.now());
-        eventRegistration.setUpdateTime(LocalDateTime.now());
-        try {
-            eventRegistrationMapper.insert(eventRegistration);
-            log.info("活动报名记录消费成功，registrationId={}, eventId={}, userId={}", eventRegistration.getId(), eventRegistration.getEventId(), eventRegistration.getUserId());
-        } catch (DuplicateKeyException e) {
-            log.warn("唯一索引拦截重复报名，eventId={}, userId={}", eventRegistration.getEventId(), eventRegistration.getUserId());
-        }
+        log.info("活动报名记录消费成功，registrationId={}, eventId={}, userId={}", eventRegistration.getId(), eventRegistration.getEventId(), eventRegistration.getUserId());
     }
 }
+

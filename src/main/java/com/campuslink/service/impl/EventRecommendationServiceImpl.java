@@ -5,8 +5,10 @@ import cn.hutool.core.util.StrUtil;
 import com.campuslink.dto.Result;
 import com.campuslink.dto.UserDTO;
 import com.campuslink.entity.CampusEvent;
+import com.campuslink.entity.EventCapacity;
 import com.campuslink.service.EventRecommendationService;
 import com.campuslink.service.ICampusEventService;
+import com.campuslink.service.IEventCapacityService;
 import com.campuslink.service.IUserInterestService;
 import com.campuslink.utils.UserHolder;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -26,6 +29,8 @@ public class EventRecommendationServiceImpl implements EventRecommendationServic
 
     @Resource
     private ICampusEventService campusEventService;
+    @Resource
+    private IEventCapacityService eventCapacityService;
     @Resource
     private IUserInterestService userInterestService;
 
@@ -39,16 +44,18 @@ public class EventRecommendationServiceImpl implements EventRecommendationServic
             return Result.ok(Collections.emptyList());
         }
         Set<String> interestSet = interests.stream().map(String::toLowerCase).collect(Collectors.toSet());
+        Map<Long, EventCapacity> capacities = eventCapacityService.list().stream()
+                .collect(Collectors.toMap(EventCapacity::getEventId, capacity -> capacity, (left, right) -> left));
         List<CampusEvent> recommended = events.stream()
-                .sorted(Comparator.comparingDouble((CampusEvent event) -> score(event, interestSet)).reversed())
+                .sorted(Comparator.comparingDouble((CampusEvent event) -> score(event, capacities.get(event.getId()), interestSet)).reversed())
                 .limit(size)
                 .collect(Collectors.toList());
         return Result.ok(recommended);
     }
 
-    private double score(CampusEvent event, Set<String> interestSet) {
+    private double score(CampusEvent event, EventCapacity capacity, Set<String> interestSet) {
         double tagMatchScore = tagMatchScore(event.getTags(), interestSet);
-        double popularityScore = popularityScore(event);
+        double popularityScore = popularityScore(event, capacity);
         double freshnessScore = freshnessScore(event);
         return tagMatchScore * 0.5 + popularityScore * 0.3 + freshnessScore * 0.2;
     }
@@ -69,14 +76,14 @@ public class EventRecommendationServiceImpl implements EventRecommendationServic
         return Math.min(1.0, matches * 1.0 / eventTags.size());
     }
 
-    private double popularityScore(CampusEvent event) {
-        Integer capacity = event.getCapacity();
-        Integer remainingSlots = event.getRemainingSlots();
-        if (capacity == null || capacity <= 0 || remainingSlots == null) {
+    private double popularityScore(CampusEvent event, EventCapacity capacity) {
+        Integer totalCapacity = event.getCapacity();
+        Integer remainingSlots = capacity == null ? null : capacity.getRemainingSlots();
+        if (totalCapacity == null || totalCapacity <= 0 || remainingSlots == null) {
             return 0;
         }
-        int registeredCount = Math.max(0, capacity - remainingSlots);
-        return Math.min(1.0, registeredCount * 1.0 / capacity);
+        int registeredCount = Math.max(0, totalCapacity - remainingSlots);
+        return Math.min(1.0, registeredCount * 1.0 / totalCapacity);
     }
 
     private double freshnessScore(CampusEvent event) {

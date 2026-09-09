@@ -91,7 +91,7 @@ public class CampusPlaceServiceImpl extends ServiceImpl<CampusPlaceMapper, Campu
     public Result queryCampusPlaceByType(Integer categoryId, Integer current, Double x, Double y) {
         if (x == null || y == null) {
             Page<CampusPlace> page = query()
-                    .eq("type_id", categoryId)
+                    .eq("category_id", categoryId)
                     .page(new Page<>(current, SystemConstants.DEFAULT_PAGE_SIZE));
             return Result.ok(page.getRecords());
         }
@@ -125,3 +125,4 @@ public class CampusPlaceServiceImpl extends ServiceImpl<CampusPlaceMapper, Campu
         return Result.ok(places);
     }
 }
+

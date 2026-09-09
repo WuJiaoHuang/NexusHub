@@ -10,5 +10,6 @@ public interface ICampusPostService extends IService<CampusPost> {
     Result queryHotCampusPost(Integer current);
     Result queryCampusPostById(Long id);
     Result queryCampusPostLikes(Long id);
-    Result quertCampusPostOfFollow(Long max, Integer offset);
+    Result queryCampusPostOfFollow(Long max, Integer offset);
 }
+

@@ -96,8 +96,9 @@ public class CampusPostController {
     public Result queryCampusPostOfFollow(
             @RequestParam("lastId") Long max,
             @RequestParam(value = "offset",defaultValue = "0") Integer offset){
-        return campusPostService.quertCampusPostOfFollow(max,offset);
+        return campusPostService.queryCampusPostOfFollow(max,offset);
 
     }
 }
+
 

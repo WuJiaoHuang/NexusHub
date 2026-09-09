@@ -123,13 +123,11 @@ CREATE TABLE campus_event (
   registration_start_time DATETIME,
   registration_end_time DATETIME,
   capacity INT DEFAULT 0,
-  remaining_slots INT DEFAULT 0,
   status INT DEFAULT 1,
   create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
   update_time DATETIME DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_event_place (place_id),
-  INDEX idx_event_category (category),
-  INDEX idx_event_remaining_slots (remaining_slots)
+  INDEX idx_event_category (category)
 ) ;
 
 CREATE TABLE event_capacity (
@@ -152,3 +150,6 @@ CREATE TABLE event_registration (
   INDEX idx_registration_user (user_id),
   INDEX idx_registration_event (event_id)
 ) ;
+
+
+

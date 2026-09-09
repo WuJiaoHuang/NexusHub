@@ -108,7 +108,7 @@ public class CampusPostServiceImpl extends ServiceImpl<CampusPostMapper, CampusP
     }
 
     @Override
-    public Result quertCampusPostOfFollow(Long max, Integer offset) {
+    public Result queryCampusPostOfFollow(Long max, Integer offset) {
         UserDTO user = UserHolder.getUser();
         if (user == null) {
             return Result.fail("请先登录");
@@ -156,3 +156,4 @@ public class CampusPostServiceImpl extends ServiceImpl<CampusPostMapper, CampusP
         post.setIsLike(score != null);
     }
 }
+

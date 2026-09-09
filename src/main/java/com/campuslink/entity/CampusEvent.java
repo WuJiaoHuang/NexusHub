@@ -1,7 +1,6 @@
 package com.campuslink.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -33,8 +32,8 @@ public class CampusEvent implements Serializable {
     private LocalDateTime registrationStartTime;
     private LocalDateTime registrationEndTime;
     private Integer capacity;
-    private Integer remainingSlots;
     private Integer status;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 }
+

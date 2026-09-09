@@ -19,6 +19,7 @@ public class FeedController {
     @GetMapping
     public Result queryFollowFeed(@RequestParam("lastId") Long max,
                                   @RequestParam(value = "offset", defaultValue = "0") Integer offset) {
-        return campusPostService.quertCampusPostOfFollow(max, offset);
+        return campusPostService.queryCampusPostOfFollow(max, offset);
     }
 }
+

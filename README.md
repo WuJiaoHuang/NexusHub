@@ -106,12 +106,10 @@ Consumer 使用 Redisson 用户-活动维度锁
   ↓
 MySQL 条件扣减 event_capacity.remaining_slots
   ↓
-同步 campus_event.remaining_slots
-  ↓
 插入 event_registration
 ```
 
-数据库唯一索引 `uk_user_event(user_id, event_id)` 作为“同一用户同一活动只能报名一次”的最终兜底。数据库扣减使用条件更新：
+`event_capacity.remaining_slots` 是活动报名容量的唯一数据库事实来源，`campus_event` 只保存活动基础展示信息和总容量。数据库唯一索引 `uk_user_event(user_id, event_id)` 作为“同一用户同一活动只能报名一次”的最终兜底。数据库扣减使用条件更新：
 
 ```sql
 UPDATE event_capacity
