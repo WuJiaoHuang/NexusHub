@@ -13,5 +13,8 @@ export const authApi = {
   },
   me() {
     return request<UserDTO>('/users/me')
+  },
+  updateAvatar(url: string) {
+    return request<UserDTO, { url: string }>('/users/avatar', { method: 'PUT', data: { url } })
   }
 }

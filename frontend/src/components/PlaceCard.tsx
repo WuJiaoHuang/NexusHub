@@ -1,7 +1,9 @@
-import { Text, View } from '@tarojs/components'
+import { Image, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
+import { useState } from 'react'
 import type { CampusPlace } from '@/types/api'
 import { formatDistance } from '@/utils/format'
+import { firstImage } from '@/utils/media'
 import './components.scss'
 
 interface PlaceCardProps {
@@ -9,10 +11,16 @@ interface PlaceCardProps {
 }
 
 export function PlaceCard({ place }: PlaceCardProps) {
+  const [failed, setFailed] = useState(false)
+  const image = firstImage(place.images)
   return (
     <View className='place-card cl-pressable' onClick={() => Taro.navigateTo({ url: `/pages/place-detail/index?id=${place.id}` })}>
       <View className='place-card__poster'>
-        <Text>{place.name.slice(0, 2)}</Text>
+        {image && !failed ? (
+          <Image className='place-card__image' src={image} mode='aspectFill' onError={() => setFailed(true)} />
+        ) : (
+          <Text>{place.name.slice(0, 2)}</Text>
+        )}
       </View>
       <View className='place-card__body'>
         <View className='place-card__row'>

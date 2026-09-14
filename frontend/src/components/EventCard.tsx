@@ -1,5 +1,6 @@
-import { Text, View } from '@tarojs/components'
+import { Image, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
+import { useState } from 'react'
 import type { CampusEvent } from '@/types/api'
 import { formatTime, splitTags } from '@/utils/format'
 import './components.scss'
@@ -9,6 +10,7 @@ interface EventCardProps {
 }
 
 export function EventCard({ event }: EventCardProps) {
+  const [failed, setFailed] = useState(false)
   const tags = splitTags(event.tags).slice(0, 3)
   const month = event.startTime ? new Date(event.startTime).toLocaleString('en-US', { month: 'short' }).toUpperCase() : 'CAMPUS'
   const day = event.startTime ? new Date(event.startTime).getDate() : ''
@@ -16,8 +18,14 @@ export function EventCard({ event }: EventCardProps) {
   return (
     <View className='event-card cl-pressable' onClick={() => Taro.navigateTo({ url: `/pages/event-detail/index?id=${event.id}` })}>
       <View className='event-card__poster'>
-        <Text className='event-card__month'>{month}</Text>
-        <Text className='event-card__day'>{day}</Text>
+        {event.cover && !failed ? (
+          <Image className='event-card__image' src={event.cover} mode='aspectFill' onError={() => setFailed(true)} />
+        ) : (
+          <>
+            <Text className='event-card__month'>{month}</Text>
+            <Text className='event-card__day'>{day}</Text>
+          </>
+        )}
       </View>
       <View className='event-card__body'>
         <Text className='event-card__title'>{event.title}</Text>

@@ -1,9 +1,12 @@
 package com.campuslink.controller;
 
 import cn.hutool.core.bean.BeanUtil;
+import com.campuslink.common.BusinessException;
+import com.campuslink.dto.AvatarUpdateDTO;
 import com.campuslink.dto.LoginFormDTO;
 import com.campuslink.dto.Result;
 import com.campuslink.dto.UserDTO;
+import com.campuslink.dto.UserProfileUpdateDTO;
 import com.campuslink.entity.User;
 import com.campuslink.entity.UserInfo;
 import com.campuslink.service.IUserInfoService;
@@ -48,8 +51,16 @@ public class UserController {
 
     @GetMapping("/me")
     public Result me() {
-        UserDTO user = UserHolder.getUser();
-        return Result.ok(user);
+        UserDTO current = UserHolder.getUser();
+        if (current == null) {
+            return Result.fail("请先登录");
+        }
+        User user = userService.getById(current.getId());
+        if (user == null) {
+            return Result.fail("用户不存在");
+        }
+        UserDTO userDTO = BeanUtil.copyProperties(user, UserDTO.class);
+        return Result.ok(userDTO);
     }
 
     @GetMapping("/info/{id}")
@@ -71,6 +82,20 @@ public class UserController {
         }
         UserDTO userDTO = BeanUtil.copyProperties(user, UserDTO.class);
         return Result.ok(userDTO);
+    }
+
+    @PutMapping("/avatar")
+    public Result updateAvatar(@Valid @RequestBody AvatarUpdateDTO request) {
+        try {
+            return userService.updateAvatar(request.getUrl());
+        } catch (BusinessException e) {
+            return Result.fail(e.getMessage());
+        }
+    }
+
+    @PutMapping("/profile")
+    public Result updateProfile(@Valid @RequestBody UserProfileUpdateDTO request) {
+        return userService.updateProfile(request);
     }
 
     @PutMapping("/interests")

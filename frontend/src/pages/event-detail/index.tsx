@@ -1,4 +1,4 @@
-import { Button, Text, View } from '@tarojs/components'
+import { Button, Image, Text, View } from '@tarojs/components'
 import Taro, { useRouter, useShareAppMessage } from '@tarojs/taro'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
@@ -15,6 +15,7 @@ export default function EventDetailPage() {
   const router = useRouter()
   const id = Number(router.params.id)
   const [status, setStatus] = useState<RegistrationUiStatus>('idle')
+  const [coverFailed, setCoverFailed] = useState(false)
   const event = useQuery({ queryKey: queryKeys.events.detail(id), queryFn: () => eventApi.detail(id), enabled: Number.isFinite(id) })
   const statusQuery = useQuery({
     queryKey: queryKeys.events.registrationStatus(id),
@@ -57,9 +58,14 @@ export default function EventDetailPage() {
   return (
     <View className='cl-page event-detail-page'>
       <View className='event-poster'>
-        <Text className='event-poster__date'>{formatTime(event.data?.startTime)}</Text>
-        <Text className='event-poster__title'>{event.data?.title}</Text>
-        <Text className='event-poster__location'>{event.data?.location}</Text>
+        {event.data?.cover && !coverFailed ? (
+          <Image className='event-poster__image' src={event.data.cover} mode='aspectFill' onError={() => setCoverFailed(true)} />
+        ) : null}
+        <View className='event-poster__content'>
+          <Text className='event-poster__date'>{formatTime(event.data?.startTime)}</Text>
+          <Text className='event-poster__title'>{event.data?.title}</Text>
+          <Text className='event-poster__location'>{event.data?.location}</Text>
+        </View>
       </View>
       <View className='event-info'>
         <Text>时间：{formatTime(event.data?.startTime)}</Text>

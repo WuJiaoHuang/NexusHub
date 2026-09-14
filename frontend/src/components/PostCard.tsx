@@ -1,10 +1,12 @@
-import { Button, Text, View } from '@tarojs/components'
+import { Button, Image, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
 import { postApi } from '@/api/post'
 import { queryKeys } from '@/queries/keys'
 import type { CampusPost } from '@/types/api'
 import { formatTime } from '@/utils/format'
+import { parseImageUrls } from '@/utils/media'
 import { UserAvatar } from './UserAvatar'
 import './components.scss'
 
@@ -14,6 +16,8 @@ interface PostCardProps {
 
 export function PostCard({ post }: PostCardProps) {
   const queryClient = useQueryClient()
+  const [failedImages, setFailedImages] = useState<string[]>([])
+  const images = parseImageUrls(post.images).filter((url) => !failedImages.includes(url)).slice(0, 9)
   const mutation = useMutation({
     mutationFn: () => postApi.like(post.id),
     onMutate: async () => {
@@ -50,6 +54,24 @@ export function PostCard({ post }: PostCardProps) {
       </View>
       <Text className='post-card__title'>{post.title}</Text>
       {post.content ? <Text className='post-card__content'>{post.content}</Text> : null}
+      {images.length > 0 ? (
+        <View className={`post-card__images post-card__images--${Math.min(images.length, 4)}`}>
+          {images.slice(0, 4).map((url, index) => (
+            <View key={url} className='post-card__image-wrap' onClick={(event) => {
+              event.stopPropagation()
+              Taro.previewImage({ current: url, urls: images })
+            }}>
+              <Image
+                className='post-card__image'
+                src={url}
+                mode='aspectFill'
+                onError={() => setFailedImages((old) => (old.includes(url) ? old : [...old, url]))}
+              />
+              {index === 3 && images.length > 4 ? <Text className='post-card__image-more'>+{images.length - 4}</Text> : null}
+            </View>
+          ))}
+        </View>
+      ) : null}
       <View className='post-card__actions'>
         <Button
           className={`post-card__like ${post.isLike ? 'post-card__like--active' : ''}`}

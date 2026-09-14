@@ -8,8 +8,12 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.campuslink.dto.LoginFormDTO;
 import com.campuslink.dto.Result;
 import com.campuslink.dto.UserDTO;
+import com.campuslink.dto.UserProfileUpdateDTO;
 import com.campuslink.entity.User;
+import com.campuslink.entity.UserInfo;
 import com.campuslink.mapper.UserMapper;
+import com.campuslink.service.AvatarUrlValidator;
+import com.campuslink.service.IUserInfoService;
 import com.campuslink.service.IUserService;
 import com.campuslink.utils.RedisConstants;
 import com.campuslink.utils.RegexUtils;
@@ -36,6 +40,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
     @Resource
     private StringRedisTemplate stringRedisTemplate;
+    @Resource
+    private AvatarUrlValidator avatarUrlValidator;
+    @Resource
+    private IUserInfoService userInfoService;
 
     @Override
     public Result sendCode(String phone, HttpSession session) {
@@ -80,6 +88,57 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         }
         UserHolder.removeUser();
         return Result.ok();
+    }
+
+    @Override
+    public Result updateAvatar(String url) {
+        UserDTO current = UserHolder.getUser();
+        if (current == null) {
+            return Result.fail("请先登录");
+        }
+        avatarUrlValidator.validateForUser(url, current.getId());
+        User user = getById(current.getId());
+        if (user == null) {
+            return Result.fail("用户不存在");
+        }
+        user.setIcon(url);
+        user.setUpdateTime(LocalDateTime.now());
+        updateById(user);
+        UserDTO dto = BeanUtil.copyProperties(user, UserDTO.class);
+        UserHolder.saveUser(dto);
+        return Result.ok(dto);
+    }
+
+    @Override
+    public Result updateProfile(UserProfileUpdateDTO profile) {
+        UserDTO current = UserHolder.getUser();
+        if (current == null) {
+            return Result.fail("请先登录");
+        }
+        User user = getById(current.getId());
+        if (user == null) {
+            return Result.fail("用户不存在");
+        }
+        user.setNickName(profile.getNickName().trim());
+        user.setUpdateTime(LocalDateTime.now());
+        updateById(user);
+
+        UserInfo info = userInfoService.getById(current.getId());
+        if (info == null) {
+            info = new UserInfo();
+            info.setUserId(current.getId());
+            info.setIntroduce(profile.getIntroduce());
+            info.setCreateTime(LocalDateTime.now());
+            info.setUpdateTime(LocalDateTime.now());
+            userInfoService.save(info);
+        } else {
+            info.setIntroduce(profile.getIntroduce());
+            info.setUpdateTime(LocalDateTime.now());
+            userInfoService.updateById(info);
+        }
+        UserDTO dto = BeanUtil.copyProperties(user, UserDTO.class);
+        UserHolder.saveUser(dto);
+        return Result.ok(dto);
     }
 
     @Override

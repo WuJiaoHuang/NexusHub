@@ -5,6 +5,7 @@ export interface CreatePostPayload {
   title: string
   content?: string
   placeId?: number | null
+  images?: string
 }
 
 export const postApi = {

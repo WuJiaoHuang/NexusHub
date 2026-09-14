@@ -1,6 +1,7 @@
-import { Button, Text, View } from '@tarojs/components'
+import { Button, Image, Text, View } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
 import { eventApi } from '@/api/event'
 import { placeApi } from '@/api/place'
 import { ErrorState } from '@/components/ErrorState'
@@ -8,13 +9,16 @@ import { EventCard } from '@/components/EventCard'
 import { SectionHeader } from '@/components/SectionHeader'
 import { queryKeys } from '@/queries/keys'
 import { formatDistance } from '@/utils/format'
+import { firstImage } from '@/utils/media'
 import './index.scss'
 
 export default function PlaceDetailPage() {
   const router = useRouter()
   const id = Number(router.params.id)
+  const [imageFailed, setImageFailed] = useState(false)
   const place = useQuery({ queryKey: queryKeys.places.detail(id), queryFn: () => placeApi.detail(id), enabled: Number.isFinite(id) })
   const events = useQuery({ queryKey: ['events', 'by-place', id], queryFn: () => eventApi.byPlace(id), enabled: Number.isFinite(id) })
+  const cover = firstImage(place.data?.images)
 
   if (place.isError) {
     return <ErrorState onRetry={() => place.refetch()} />
@@ -23,7 +27,11 @@ export default function PlaceDetailPage() {
   return (
     <View className='cl-page place-detail-page'>
       <View className='place-hero'>
-        <Text>{place.data?.name?.slice(0, 2) || 'CL'}</Text>
+        {cover && !imageFailed ? (
+          <Image className='place-hero__image' src={cover} mode='aspectFill' onError={() => setImageFailed(true)} />
+        ) : (
+          <Text>{place.data?.name?.slice(0, 2) || 'CL'}</Text>
+        )}
       </View>
       <Text className='place-title'>{place.data?.name}</Text>
       <Text className='place-meta'>{formatDistance(place.data?.distance)} / {place.data?.area || '校园内'}</Text>

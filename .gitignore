@@ -7,6 +7,10 @@ logs/
 .env
 .env.*
 application-local.yml
+application-secret.yml
+secrets/
+*.pem
+*.key
 
 node_modules/
 dist/
@@ -16,3 +20,4 @@ frontend/node_modules/
 frontend/dist/
 frontend/.swc/
 !frontend/.env.example
+!.env.example

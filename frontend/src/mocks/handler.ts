@@ -1,5 +1,6 @@
 import { mockCategories, mockEvents, mockPlaces, mockPosts, mockUser } from './data'
 import type { CampusPlaceSearchResponse, EventRegistration, ScrollResult } from '@/types/api'
+import type { UploadResponse } from '@/types/media'
 
 function numberAfter(path: string, prefix: string): number {
   return Number(path.replace(prefix, '').split('/')[0])
@@ -12,7 +13,13 @@ export async function mockRequest<TResponse>(url: string): Promise<TResponse> {
   if (path === '/auth/code') return '123456' as TResponse
   if (path === '/auth/login') return 'demo-token' as TResponse
   if (path === '/users/me') return mockUser as TResponse
+  if (path === '/users/avatar') return mockUser as TResponse
   if (path === '/users/interests') return ['Java', 'AI', '篮球'] as TResponse
+  if (path === '/uploads/image') {
+    const scene = parsed.searchParams.get('scene') || 'POST'
+    const objectKey = scene === 'AVATAR' ? 'avatars/1/demo.jpg' : 'posts/1/202609/demo.jpg'
+    return { objectKey, url: `https://mock.campuslink.local/${objectKey}`, size: 1024, contentType: 'image/jpeg' } satisfies UploadResponse as TResponse
+  }
   if (path === '/place-categories/list') return mockCategories as TResponse
   if (path === '/places/nearby') {
     const categoryId = Number(parsed.searchParams.get('categoryId'))

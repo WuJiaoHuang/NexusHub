@@ -1,15 +1,37 @@
 import { Button, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { authApi } from '@/api/auth'
+import { uploadImage } from '@/api/upload'
 import { UserAvatar } from '@/components/UserAvatar'
+import { chooseImages, compressImageForAvatar } from '@/platform/media'
 import { queryKeys } from '@/queries/keys'
 import { useAuthStore } from '@/store/auth'
 import './index.scss'
 
 export default function ProfilePage() {
+  const queryClient = useQueryClient()
   const logoutLocal = useAuthStore((state) => state.logoutLocal)
+  const setUser = useAuthStore((state) => state.setUser)
   const me = useQuery({ queryKey: queryKeys.user.me, queryFn: authApi.me, retry: false })
+  const avatarUpload = useMutation({
+    mutationFn: async (sourceType: Array<'album' | 'camera'>) => {
+      const selected = await chooseImages({ count: 1, sourceType })
+      const first = selected[0]
+      if (!first) {
+        throw new Error('请选择图片')
+      }
+      const compressed = await compressImageForAvatar(first)
+      const uploaded = await uploadImage({ filePath: compressed.path, file: compressed.file, scene: 'AVATAR' })
+      return authApi.updateAvatar(uploaded.url)
+    },
+    onSuccess: (user) => {
+      setUser(user)
+      queryClient.setQueryData(queryKeys.user.me, user)
+      Taro.showToast({ title: '头像更新成功', icon: 'success' })
+    },
+    onError: () => Taro.showToast({ title: '上传失败，请稍后重试', icon: 'none' })
+  })
   const logout = useMutation({
     mutationFn: authApi.logout,
     onSettled: () => {
@@ -17,6 +39,18 @@ export default function ProfilePage() {
       Taro.redirectTo({ url: '/pages/login/index' })
     }
   })
+
+  async function handleAvatarTap() {
+    if (avatarUpload.isPending) {
+      return
+    }
+    try {
+      const action = await Taro.showActionSheet({ itemList: ['拍照', '从相册选择'] })
+      avatarUpload.mutate(action.tapIndex === 0 ? ['camera'] : ['album'])
+    } catch {
+      // User cancelled the action sheet.
+    }
+  }
 
   if (me.isError) {
     return (
@@ -34,7 +68,15 @@ export default function ProfilePage() {
   return (
     <View className='cl-page profile-page'>
       <View className='profile-head'>
-        <UserAvatar name={me.data?.nickName} />
+        <View className='profile-avatar-wrap' onClick={handleAvatarTap}>
+          <UserAvatar name={me.data?.nickName} src={me.data?.icon} />
+          <View className='profile-avatar-camera'>+</View>
+          {avatarUpload.isPending ? (
+            <View className='profile-avatar-overlay'>
+              <Text>上传中</Text>
+            </View>
+          ) : null}
+        </View>
         <View>
           <Text className='profile-name'>{me.data?.nickName || '校园同学'}</Text>
           <Text className='profile-id'>STUDENT ID / {me.data?.id || '--'}</Text>

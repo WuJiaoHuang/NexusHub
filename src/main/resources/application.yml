@@ -57,3 +57,11 @@ campuslink:
   registration:
     slots-warmup-enabled: ${EVENT_SLOTS_WARMUP_ENABLED:true}
 
+aliyun:
+  oss:
+    enabled: ${ALIYUN_OSS_ENABLED:false}
+    endpoint: ${ALIYUN_OSS_ENDPOINT:https://oss-cn-beijing.aliyuncs.com}
+    bucket-name: ${ALIYUN_OSS_BUCKET:java-ai-wujiaohuang}
+    access-key-id: ${ALIYUN_OSS_ACCESS_KEY_ID:}
+    access-key-secret: ${ALIYUN_OSS_ACCESS_KEY_SECRET:}
+    public-base-url: ${ALIYUN_OSS_PUBLIC_BASE_URL:https://java-ai-wujiaohuang.oss-cn-beijing.aliyuncs.com}

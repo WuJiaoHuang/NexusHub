@@ -129,6 +129,7 @@ WHERE event_id = ?
 - Lua + RabbitMQ + Redisson + MySQL 唯一索引共同支撑热门活动限额报名。
 - Elasticsearch 支持校园地点搜索索引的全量重建与增量同步。
 - 基于兴趣标签、活动热度、报名时效性的轻量级规则活动推荐。
+- 媒体上传：支持头像与动态图片上传，开发默认使用 mock 地址，生产可切换到阿里云 OSS。
 
 ## 8. API 示例
 
@@ -139,6 +140,17 @@ POST /auth/code
 POST /auth/login
 POST /auth/logout
 GET  /users/me
+PUT  /users/avatar
+PUT  /users/profile
+```
+
+媒体上传：
+
+```text
+POST /uploads/image
+Content-Type: multipart/form-data
+fields: file, scene
+scene: AVATAR | POST | EVENT | PLACE
 ```
 
 校园地点：
@@ -251,6 +263,10 @@ RABBITMQ_PASSWORD=campuslink_dev
 PLACE_CACHE_STRATEGY=PASS_THROUGH
 PLACE_SEARCH_INDEX=campuslink_place
 EVENT_SLOTS_WARMUP_ENABLED=true
+ALIYUN_OSS_ENABLED=false
+ALIYUN_OSS_ENDPOINT=https://oss-cn-beijing.aliyuncs.com
+ALIYUN_OSS_BUCKET_NAME=java-ai-wujiaohuang
+ALIYUN_OSS_PUBLIC_BASE_URL=https://java-ai-wujiaohuang.oss-cn-beijing.aliyuncs.com
 ```
 
 PowerShell 启动应用：
@@ -268,6 +284,22 @@ $env:ELASTICSEARCH_PORT="19200"
 mvn spring-boot:run
 ```
 
+### 阿里云 OSS 媒体上传
+
+默认 `ALIYUN_OSS_ENABLED=false`，后端会返回本地 mock URL，便于无云账号环境完成联调。生产或真实联调时设置：
+
+```powershell
+$env:ALIYUN_OSS_ENABLED="true"
+$env:ALIYUN_OSS_ENDPOINT="https://oss-cn-beijing.aliyuncs.com"
+$env:ALIYUN_OSS_BUCKET_NAME="java-ai-wujiaohuang"
+$env:ALIYUN_OSS_PUBLIC_BASE_URL="https://java-ai-wujiaohuang.oss-cn-beijing.aliyuncs.com"
+$env:ALIYUN_OSS_ACCESS_KEY_ID="<YOUR_KEY_ID>"
+$env:ALIYUN_OSS_ACCESS_KEY_SECRET="<YOUR_KEY_SECRET>"
+mvn spring-boot:run
+```
+
+上传接口要求登录态。普通用户仅允许 `AVATAR` 和 `POST` 场景，图片类型限制为 `jpg/jpeg/png/webp`；头像最大 5MB，动态图片最大 10MB。对象路径按业务隔离：头像写入 `avatars/{userId}/`，动态图片写入 `posts/{userId}/{yyyyMM}/`。更新头像时，后端会校验 URL 必须属于当前用户上传前缀，避免越权绑定他人图片。
+
 ## 11. 测试
 
 ```bash
@@ -275,7 +307,7 @@ mvn clean compile
 mvn test
 ```
 
-当前测试覆盖 Spring Context、Mapper 基础查询、RedisIdWorker、缓存策略、校园地点搜索转换/查询/同步事件、报名责任链、Lua 报名脚本、报名事务落库与 Redis 补偿。
+当前测试覆盖 Spring Context、Mapper 基础查询、RedisIdWorker、缓存策略、校园地点搜索转换/查询/同步事件、报名责任链、Lua 报名脚本、报名事务落库与 Redis 补偿，以及媒体上传校验、mock 存储、头像 URL 越权校验和上传 Controller。
 
 ## 12. CampusLink Frontend
 
@@ -297,6 +329,7 @@ WeChat     H5
 - 发现：地点分类、附近地点、定位失败回退默认校园位置。
 - 搜索：300ms debounce、历史搜索、地点实时结果。
 - 动态：热门动态、发布文字动态、点赞乐观更新。
+- 媒体：H5 与微信小程序选择图片、头像上传、动态图片并发上传、预览和删除。
 - 活动：推荐、热门、全部活动，活动详情与异步报名轮询。
 - 我的：登录、退出、我的活动、兴趣标签。
 - H5 Demo Mode：`TARO_APP_DEMO_MODE=true` 时使用北邮校园语境 mock 数据。
