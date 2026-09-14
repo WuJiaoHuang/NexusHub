@@ -277,3 +277,62 @@ mvn test
 
 当前测试覆盖 Spring Context、Mapper 基础查询、RedisIdWorker、缓存策略、校园地点搜索转换/查询/同步事件、报名责任链、Lua 报名脚本、报名事务落库与 Redis 补偿。
 
+## 12. CampusLink Frontend
+
+本仓库新增 `frontend/`，提供一套面向微信小程序主端与 H5 Demo 的 Taro + React + TypeScript 前端。
+
+```text
+Spring Boot Backend
+  ↓
+REST API
+  ↓
+Taro Frontend
+  ↙        ↘
+WeChat     H5
+```
+
+### 前端能力
+
+- 首页：今日校园、热门活动、校园动态。
+- 发现：地点分类、附近地点、定位失败回退默认校园位置。
+- 搜索：300ms debounce、历史搜索、地点实时结果。
+- 动态：热门动态、发布文字动态、点赞乐观更新。
+- 活动：推荐、热门、全部活动，活动详情与异步报名轮询。
+- 我的：登录、退出、我的活动、兴趣标签。
+- H5 Demo Mode：`TARO_APP_DEMO_MODE=true` 时使用北邮校园语境 mock 数据。
+
+### 启动
+
+```bash
+cd frontend
+pnpm install
+pnpm dev:weapp
+pnpm dev:h5
+```
+
+### 构建
+
+```bash
+cd frontend
+pnpm lint
+pnpm test
+pnpm build:weapp
+pnpm build:h5
+```
+
+### 环境变量
+
+复制 `frontend/.env.example` 并按环境调整：
+
+```text
+TARO_APP_API_BASE_URL=http://localhost:8080
+TARO_APP_DEMO_MODE=false
+```
+
+生产微信小程序请求域名必须配置 HTTPS 合法域名。开发阶段可在微信开发者工具中关闭域名校验。
+
+### 文档
+
+- 前端真实接口契约：`docs/frontend-api-contract.md`
+- 60 秒演示路线：`docs/demo-script.md`
+- 面试讲解：`docs/frontend-interview.md`

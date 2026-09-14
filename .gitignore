@@ -7,3 +7,12 @@ logs/
 .env
 .env.*
 application-local.yml
+
+node_modules/
+dist/
+.swc/
+
+frontend/node_modules/
+frontend/dist/
+frontend/.swc/
+!frontend/.env.example

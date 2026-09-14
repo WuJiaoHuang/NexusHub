@@ -1,0 +1,67 @@
+.profile-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 0;
+}
+
+.profile-name {
+  display: block;
+  font-size: 22px;
+  font-weight: 650;
+}
+
+.profile-id {
+  display: block;
+  margin-top: 4px;
+  color: var(--cl-text-secondary);
+  font-size: 12px;
+}
+
+.profile-menu,
+.login-card {
+  overflow: hidden;
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-lg);
+  background: var(--cl-surface);
+}
+
+.profile-menu text {
+  display: block;
+  min-height: 52px;
+  padding: 16px;
+  border-bottom: 1px solid var(--cl-border);
+  font-size: 15px;
+}
+
+.profile-menu text:last-child {
+  border-bottom: 0;
+}
+
+.profile-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  margin-top: 18px;
+  border-radius: var(--cl-radius-md);
+  background: var(--cl-primary);
+  color: #fff;
+  font-size: 15px;
+}
+
+.profile-button--ghost {
+  border: 1px solid var(--cl-border);
+  background: transparent;
+  color: var(--cl-text);
+}
+
+.login-card {
+  padding: 24px;
+}
+
+.login-card__title {
+  display: block;
+  font-size: 22px;
+  font-weight: 650;
+}
