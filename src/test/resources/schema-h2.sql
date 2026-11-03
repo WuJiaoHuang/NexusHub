@@ -1,11 +1,11 @@
 DROP TABLE IF EXISTS event_registration;
 DROP TABLE IF EXISTS event_capacity;
-DROP TABLE IF EXISTS campus_event;
+DROP TABLE IF EXISTS event;
 DROP TABLE IF EXISTS user_interest;
-DROP TABLE IF EXISTS campus_post_comments;
-DROP TABLE IF EXISTS campus_post;
+DROP TABLE IF EXISTS post_comment;
+DROP TABLE IF EXISTS post;
 DROP TABLE IF EXISTS tb_follow;
-DROP TABLE IF EXISTS campus_place;
+DROP TABLE IF EXISTS place;
 DROP TABLE IF EXISTS place_category;
 DROP TABLE IF EXISTS tb_user_info;
 DROP TABLE IF EXISTS tb_user;
@@ -52,7 +52,7 @@ CREATE TABLE place_category (
   update_time DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ;
 
-CREATE TABLE campus_place (
+CREATE TABLE place (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(128) NOT NULL,
   category_id BIGINT NOT NULL,
@@ -79,7 +79,7 @@ CREATE TABLE tb_follow (
   UNIQUE KEY uk_follow (user_id, follow_user_id)
 ) ;
 
-CREATE TABLE campus_post (
+CREATE TABLE post (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   place_id BIGINT NULL,
   user_id BIGINT NOT NULL,
@@ -95,7 +95,7 @@ CREATE TABLE campus_post (
   INDEX idx_post_place (place_id)
 ) ;
 
-CREATE TABLE campus_post_comments (
+CREATE TABLE post_comment (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   user_id BIGINT NOT NULL,
   post_id BIGINT NOT NULL,
@@ -109,7 +109,7 @@ CREATE TABLE campus_post_comments (
   INDEX idx_comment_post (post_id)
 ) ;
 
-CREATE TABLE campus_event (
+CREATE TABLE event (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   place_id BIGINT NULL,
   title VARCHAR(128) NOT NULL,

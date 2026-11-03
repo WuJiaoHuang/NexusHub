@@ -1,15 +1,15 @@
 services:
   mysql:
     image: mysql:8.0
-    container_name: campuslink-mysql
+    container_name: nexushub-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-campuslink_dev}
-      MYSQL_DATABASE: campuslink
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-nexushub_dev}
+      MYSQL_DATABASE: nexushub
       TZ: Asia/Shanghai
     ports:
       - "${MYSQL_PORT:-13306}:3306"
     volumes:
-      - campuslink-mysql-data:/var/lib/mysql
+      - nexushub-mysql-data:/var/lib/mysql
       - ./sql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
       - ./sql/data.sql:/docker-entrypoint-initdb.d/02-data.sql:ro
     healthcheck:
@@ -20,31 +20,31 @@ services:
 
   redis:
     image: redis:6.2
-    container_name: campuslink-redis
+    container_name: nexushub-redis
     environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-campuslink_dev}
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-campuslink_dev}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-nexushub_dev}
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-nexushub_dev}
     ports:
       - "${REDIS_PORT:-16379}:6379"
     volumes:
-      - campuslink-redis-data:/data
+      - nexushub-redis-data:/data
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a $${REDIS_PASSWORD:-campuslink_dev} ping | grep PONG"]
+      test: ["CMD-SHELL", "redis-cli -a $${REDIS_PASSWORD:-nexushub_dev} ping | grep PONG"]
       interval: 10s
       timeout: 5s
       retries: 10
 
   rabbitmq:
     image: rabbitmq:3.12-management
-    container_name: campuslink-rabbitmq
+    container_name: nexushub-rabbitmq
     environment:
-      RABBITMQ_DEFAULT_USER: campuslink
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-campuslink_dev}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-nexushub}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-nexushub_dev}
     ports:
       - "${RABBITMQ_PORT:-5673}:5672"
       - "${RABBITMQ_MANAGEMENT_PORT:-15673}:15672"
     volumes:
-      - campuslink-rabbitmq-data:/var/lib/rabbitmq
+      - nexushub-rabbitmq-data:/var/lib/rabbitmq
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
@@ -53,7 +53,7 @@ services:
 
   elasticsearch:
     image: elasticsearch:7.6.2
-    container_name: campuslink-elasticsearch
+    container_name: nexushub-elasticsearch
     environment:
       discovery.type: single-node
       ES_JAVA_OPTS: "-Xms512m -Xmx512m"
@@ -62,7 +62,7 @@ services:
     ports:
       - "${ELASTICSEARCH_PORT:-19200}:9200"
     volumes:
-      - campuslink-elasticsearch-data:/usr/share/elasticsearch/data
+      - nexushub-elasticsearch-data:/usr/share/elasticsearch/data
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health | grep -E 'green|yellow'"]
       interval: 10s
@@ -70,8 +70,12 @@ services:
       retries: 20
 
 volumes:
-  campuslink-mysql-data:
-  campuslink-redis-data:
-  campuslink-rabbitmq-data:
-  campuslink-elasticsearch-data:
+  nexushub-mysql-data:
+    name: ${MYSQL_DATA_VOLUME:-nexushub-mysql-data}
+  nexushub-redis-data:
+    name: ${REDIS_DATA_VOLUME:-nexushub-redis-data}
+  nexushub-rabbitmq-data:
+    name: ${RABBITMQ_DATA_VOLUME:-nexushub-rabbitmq-data}
+  nexushub-elasticsearch-data:
+    name: ${ELASTICSEARCH_DATA_VOLUME:-nexushub-elasticsearch-data}
 

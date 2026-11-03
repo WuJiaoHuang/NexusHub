@@ -1,17 +1,9 @@
-CREATE DATABASE IF NOT EXISTS campuslink DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE campuslink;
+-- 仅用于全新 NexusHub 环境；已有数据库请使用 docs/migration.md。
+-- 不包含 DROP TABLE；遇到已有表时应停止并检查，禁止使用 mysql --force。
+SET NAMES utf8mb4;
+CREATE DATABASE IF NOT EXISTS nexushub DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE nexushub;
 
-DROP TABLE IF EXISTS event_registration;
-DROP TABLE IF EXISTS event_capacity;
-DROP TABLE IF EXISTS campus_event;
-DROP TABLE IF EXISTS user_interest;
-DROP TABLE IF EXISTS campus_post_comments;
-DROP TABLE IF EXISTS campus_post;
-DROP TABLE IF EXISTS tb_follow;
-DROP TABLE IF EXISTS campus_place;
-DROP TABLE IF EXISTS place_category;
-DROP TABLE IF EXISTS tb_user_info;
-DROP TABLE IF EXISTS tb_user;
 
 CREATE TABLE tb_user (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -55,7 +47,7 @@ CREATE TABLE place_category (
   update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE campus_place (
+CREATE TABLE place (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   name VARCHAR(128) NOT NULL,
   category_id BIGINT NOT NULL,
@@ -82,7 +74,7 @@ CREATE TABLE tb_follow (
   UNIQUE KEY uk_follow (user_id, follow_user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE campus_post (
+CREATE TABLE post (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   place_id BIGINT NULL,
   user_id BIGINT NOT NULL,
@@ -98,7 +90,7 @@ CREATE TABLE campus_post (
   INDEX idx_post_place (place_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE campus_post_comments (
+CREATE TABLE post_comment (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   user_id BIGINT NOT NULL,
   post_id BIGINT NOT NULL,
@@ -112,7 +104,7 @@ CREATE TABLE campus_post_comments (
   INDEX idx_comment_post (post_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE campus_event (
+CREATE TABLE event (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   place_id BIGINT NULL,
   title VARCHAR(128) NOT NULL,

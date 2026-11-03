@@ -8,11 +8,11 @@
         <version>2.3.12.RELEASE</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
-    <groupId>com.campuslink</groupId>
-    <artifactId>campuslink</artifactId>
+    <groupId>com.nexushub</groupId>
+    <artifactId>nexushub</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>CampusLink</name>
-    <description>本地生活高并发后端服务平台</description>
+    <name>NexusHub</name>
+    <description>综合生活与兴趣社区后端平台</description>
     <properties>
         <java.version>1.8</java.version>
         <elasticsearch.version>7.6.2</elasticsearch.version>

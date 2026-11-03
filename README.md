@@ -1,371 +1,204 @@
-# CampusLink
+# NexusHub
 
-## 1. 项目简介
+NexusHub 是一个基于 Spring Boot 构建的综合生活与兴趣社区后端平台，涵盖地点发现、社区动态、用户关注、兴趣推荐及热门活动报名等核心功能。本仓库为独立 Java REST API 后端。
 
-CampusLink 是一个面向高校学生的校园生活与活动社区后端项目。项目从本地生活点评业务重构为校园场景，支持校园地点浏览与搜索、附近设施检索、校园动态发布与点赞、用户关注 Feed、校园活动浏览与限额报名，以及基于兴趣标签、活动热度和时效性的轻量级规则活动推荐。
+仓库地址：[WuJiaoHuang/NexusHub](https://github.com/WuJiaoHuang/NexusHub)。
 
-项目保留原有成熟的 Spring Boot + Redis 技术实现，以 MySQL 作为主数据源，以 Redis 支撑缓存、登录态、GEO、Bitmap、ZSet Feed 和高并发活动报名预扣减，以 RabbitMQ 异步削峰处理报名落库，以 Elasticsearch 构建校园地点搜索索引。
+## 1. 技术栈
 
-## 2. 核心功能
+| 技术 | 仓库使用版本与用途 |
+| --- | --- |
+| Java | 8（Maven 编译目标 1.8） |
+| Spring Boot | 2.3.12.RELEASE，Web、校验、事务、AMQP |
+| MyBatis-Plus | 3.4.3，Mapper、分页、条件更新 |
+| MySQL | Docker 8.0，Connector/J 8.0.28 |
+| Redis | Docker 6.2，缓存与原子脚本 |
+| Spring Data Redis / Lettuce | 2.6.2 / 6.1.6.RELEASE |
+| Redisson | 3.13.6，报名分布式锁 |
+| RabbitMQ | Docker 3.12-management，异步报名、重试与死信 |
+| Elasticsearch | 服务端及 High Level REST Client 7.6.2 |
+| 阿里云 OSS SDK | 3.17.4，媒体上传 |
+| Hutool / Lombok | 5.7.17 / 1.18.46 |
+| Maven / JUnit Jupiter / H2 | 构建、单元测试、内存数据库测试；测试版本由 Boot 管理 |
 
-- 用户认证：手机号验证码登录，token 存入 Redis，拦截器恢复用户上下文。
-- 校园地点：浏览地点详情、按分类查询、按位置查询附近校园设施。
-- 校园地点搜索：基于 Elasticsearch 索引 `campuslink_place`，支持关键词、多条件筛选、分页和排序。
-- 校园社区：发布校园动态、查询热门动态、点赞动态、查看动态点赞用户。
-- 关注 Feed：发布动态后推送到粉丝 inbox ZSet，关注用户按时间线滚动分页查看动态。
-- 校园活动：浏览活动、查看活动详情、按校园地点查看相关活动。
-- 高并发活动报名：Redis Lua 原子校验剩余名额与重复报名，RabbitMQ 异步创建报名记录，数据库唯一索引兜底。
-- 用户兴趣标签：用户可设置 Java、AI、篮球、摄影等兴趣标签。
-- 活动推荐：基于兴趣标签、报名热度和活动时效性的轻量级规则推荐，不依赖 AI 模型。
+本次重构保留现有依赖版本及构建插件。
 
-## 3. 技术栈
+## 2. 系统架构
 
-```text
-Spring Boot 2.3.12
-Spring MVC
-MyBatis-Plus
-MySQL 8
-Redis 6
-RabbitMQ 3.12
-Redisson
-Elasticsearch 7.6.2
-RestHighLevelClient
-Lua
-Hutool
-Lombok
-JUnit 5
-H2 Test Database
-Docker Compose
+```mermaid
+flowchart LR
+  Client[REST API 调用方] --> Web[Controller / 登录拦截器 / 统一异常处理]
+  Web --> Service[业务 Service / 校验链]
+  Service --> MySQL[(MySQL)]
+  Service --> Redis[(Redis 缓存 / GEO / ZSet / Bitmap / Lua)]
+  Service --> ES[(Elasticsearch 地点索引)]
+  Service --> OSS[OSS 或模拟媒体存储]
+  Service --> MQ[RabbitMQ 报名队列]
+  MQ --> Consumer[Consumer / Redisson / 事务 Service]
+  Consumer --> MySQL
+  MQ --> DLQ[死信消费者]
+  DLQ --> Redis
 ```
 
-## 4. 项目架构
+代码根包为 `com.nexushub`，启动类为 `NexusHubApplication`，Mapper 扫描为 `com.nexushub.mapper`。领域模型包括 `Place`、`Post`、`PostComment`、`Event`、`EventCapacity`、`EventRegistration`。
 
-```text
-Client
-  ↓
-Spring Boot API
-  ↓
-Controller
-  ↓
-Service / Domain Event / Listener
-  ↓
-MyBatis-Plus / Redis / RabbitMQ / Elasticsearch
-```
+## 3. 核心业务
 
-```text
-校园地点缓存
-Client -> /places/{id} -> Redis Cache -> MySQL -> Redis Cache
-```
+- 用户认证：手机号验证码登录、Redis Token、个人资料、头像与兴趣标签维护、签到。
+- 地点发现：详情、按名称查询、按分类分页、GEO 附近检索、组合条件搜索。
+- 社区动态：发布、热门排序、详情、点赞及点赞用户列表。
+- 用户关注与 Feed：关注关系、共同关注、动态推送与滚动分页。
+- 活动报名：活动列表、详情、热门活动、地点关联活动、报名状态与个人报名记录。
+- 兴趣推荐：标签匹配、报名热度、时效性加权排序，权重分别为 0.5、0.3、0.2，属于规则推荐。
+- 媒体上传：头像、动态、地点、活动图片，支持 JPEG/PNG/WebP；头像最大 5MB，动态单图最大 10MB。
 
-```text
-附近校园地点
-Client -> /places/nearby -> Redis GEO geo:place:type:{categoryId} -> MySQL 回表排序
-```
+## 4. 高并发活动报名
 
-```text
-关注 Feed
-CampusPost 发布 -> 查询粉丝 -> Redis ZSet feed:{userId} -> /feeds 滚动分页
-```
+1. `RegistrationValidationChain` 校验活动容量记录与报名时间窗口。
+2. `event_registration.lua` 原子检查名额与重复报名，成功后扣减 Redis 名额并记录用户。
+3. 发送 `EventRegistrationMessage` 至原有 Exchange 和 Queue。HTTP 成功表示报名已受理，最终结果通过状态接口查询。
+4. Consumer 调用事务 Service，使用活动与用户维度的 Redisson 锁。
+5. 查询重复记录，**先插入报名记录，再条件扣减数据库容量**，两者处于同一事务中。唯一索引冲突或容量更新失败均回滚。
+6. 监听容器按原配置重试，耗尽后进入死信队列。死信消费者先检查该报名记录是否已落库，未落库才执行 Redis 补偿。
+7. `compensate_event_registration.lua` 通过 `event:registration:compensated:{registrationId}` 保证同一报名补偿幂等，标记 TTL 为 86400 秒。
 
-```text
-热门活动报名
-Client -> /events/{eventId}/registrations -> Lua 原子校验 -> RabbitMQ -> Redisson 锁 -> MySQL 落库
-```
-
-## 5. Redis 使用场景
-
-- 缓存校园地点详情：`cache:place:{id}`，减少热点地点的 MySQL 压力。
-- 缓存地点分类：`cache:place:type`，加速分类列表读取。
-- 登录态：`login:token:{token}` 保存登录用户摘要信息。
-- GEO 附近地点：`geo:place:type:{categoryId}` 保存校园地点坐标并按距离查询。
-- Bitmap 签到：`sign:{userId}:{yyyyMM}` 保存每日签到状态。
-- ZSet 动态点赞：`post:liked:{postId}` 保存点赞用户和点赞时间。
-- ZSet 关注 Feed：`feed:{userId}` 以发布时间戳作为 score 实现时间线。
-- 活动报名容量控制：`event:slots:{eventId}` 与 `event:registration:{eventId}` 配合 Lua 原子预扣减。
-
-CampusLink 对校园地点等高频读取数据进行 Redis 缓存，通过空值缓存缓解缓存穿透，并通过互斥重建或逻辑过期策略降低热点校园地点的缓存击穿风险。
-
-CampusLink 使用 Redis ZSet 实现基于时间线的关注 Feed 流，并通过 score + offset 实现滚动分页，解决传统 offset 分页在动态内容持续插入时可能产生的重复或遗漏问题。
-
-## 6. 高并发活动报名流程
-
-```text
-请求报名
-  ↓
-RegistrationValidationChain 前置校验活动存在与报名时间窗口
-  ↓
-Lua 原子检查活动剩余名额
-  ↓
-Lua 原子检查用户是否已报名
-  ↓
-Redis 扣减剩余名额并记录用户报名标记
-  ↓
-发送 EventRegistrationMessage 到 RabbitMQ
-  ↓
-Consumer 使用 Redisson 用户-活动维度锁
-  ↓
-MySQL 条件扣减 event_capacity.remaining_slots
-  ↓
-插入 event_registration
-```
-
-`event_capacity.remaining_slots` 是活动报名容量的唯一数据库事实来源，`campus_event` 只保存活动基础展示信息和总容量。数据库唯一索引 `uk_user_event(user_id, event_id)` 作为“同一用户同一活动只能报名一次”的最终兜底。数据库扣减使用条件更新：
+数据库最终容量保护保持为：
 
 ```sql
 UPDATE event_capacity
 SET remaining_slots = remaining_slots - 1
-WHERE event_id = ?
-  AND remaining_slots > 0;
+WHERE event_id = ? AND remaining_slots > 0;
 ```
 
-失败补偿通过 `compensate_event_registration.lua` 原子恢复 Redis 剩余名额、删除报名标记，并写入补偿幂等标记 `event:registration:compensated:{registrationId}`。
+`event_registration.uk_user_event(user_id,event_id)` 防止重复记录，重投已落库消息不会再次消耗容量。Exchange、Queue、Routing Key 与原实现相同。
 
-## 7. 项目亮点
+现有实现的边界：未引入事务 Outbox 或发送确认补偿，Redis 扣减后发送 MQ 失败仍需运维核对。锁释放发生在方法内部，事务由代理在方法返回后提交，最终并发安全依赖数据库唯一索引及条件更新。启动预热会从 MySQL 写回 Redis 名额，因此有在途报名时不得直接重启或混跑迁移实例。补偿标记有效期为一天，超期死信回放需人工审核。本次重构保留原有事务和算法边界。
 
-- 以校园地点、校园动态、校园活动报名构成新的业务闭环。
-- Redis 缓存、GEO、Bitmap、ZSet、Lua 多场景组合应用。
-- ZSet Feed 使用 score + offset 支持滚动分页。
-- Redis GEO 支持按分类检索附近食堂、自习室、运动场馆、校园服务点。
-- Lua + RabbitMQ + Redisson + MySQL 唯一索引共同支撑热门活动限额报名。
-- Elasticsearch 支持校园地点搜索索引的全量重建与增量同步。
-- 基于兴趣标签、活动热度、报名时效性的轻量级规则活动推荐。
-- 媒体上传：支持头像与动态图片上传，开发默认使用 mock 地址，生产可切换到阿里云 OSS。
+## 5. Redis 设计
 
-## 8. API 示例
+| Key | 用途 |
+| --- | --- |
+| `login:code:{phone}` / `login:token:{token}` | 验证码与登录状态 |
+| `cache:place:{id}` / `cache:place:type` | 地点详情与分类缓存 |
+| `lock:place:{id}` | 热点缓存互斥重建 |
+| `geo:place:type:{categoryId}` | 分类地点 GEO |
+| `sign:{userId}:{yyyyMM}` | Bitmap 签到 |
+| `post:liked:{postId}` | ZSet 点赞用户及时间 |
+| `feed:{userId}` | ZSet Feed，score + offset 滚动分页 |
+| `event:slots:{eventId}` | 报名剩余名额 |
+| `event:registration:{eventId}` | 已预占名额的用户集合 |
+| `event:registration:compensated:{registrationId}` | 补偿幂等标记 |
 
-认证：
+地点缓存采用 Cache Aside，更新数据库后删除缓存。策略工厂支持 `PASS_THROUGH`（默认，空值缓存防穿透）、`MUTEX`（互斥重建）和 `LOGICAL_EXPIRE`（逻辑过期）。Key 及 Lua 算法未因改名而改变。启动时 GEO 初始化读取地点并按分类构建索引。
 
-```text
-POST /auth/code
-POST /auth/login
-POST /auth/logout
-GET  /users/me
-PUT  /users/avatar
-PUT  /users/profile
-```
+## 6. Elasticsearch 检索
 
-媒体上传：
+默认索引为 `nexushub_place`，可通过原变量 `PLACE_SEARCH_INDEX` 覆盖。
 
-```text
-POST /uploads/image
-Content-Type: multipart/form-data
-fields: file, scene
-scene: AVATAR | POST | EVENT | PLACE
-```
+`GET /places/search` 支持 `keyword`、`categoryId`、`area`、`minPrice`、`maxPrice`、`minScore`、`sort`、`current`、`size`。排序值为 `score_desc`、`sold_desc`、`avgPrice_asc`、`avgPrice_desc`。关键词查询覆盖名称、描述、地址、地区。
 
-校园地点：
+`PlaceSearchConverter` 转换实体与文档；地点变更通过监听器在事务提交后增量同步。`POST /admin/search/places/rebuild` 批量重建，默认批次 500。搜索和同步会在索引不存在时创建 mapping。
 
-```text
-GET  /places
-POST /places
-GET  /places/{id}
-PUT  /places
-GET  /places/nearby?categoryId=1&current=1&x=120.1542&y=30.2871
-GET  /places/search?keyword=图书馆&current=1&size=10
-GET  /place-categories/list
-```
+重建会删除并重建**当前配置的目标索引**，应在维护窗口执行。迁移时配置新索引再重建，保留旧索引，参见 [数据迁移](docs/migration.md)。
 
-校园动态与 Feed：
+## 7. 数据库设计
 
-```text
-POST /posts
-GET  /posts/{id}
-GET  /posts/hot
-PUT  /posts/like/{id}
-GET  /posts/likes/{id}
-GET  /feeds?lastId=1690000000000&offset=0
-```
+默认库为 `nexushub`。
 
-关注：
+| 表 | 职责与关键约束 |
+| --- | --- |
+| `tb_user` / `tb_user_info` | 用户与扩展资料，手机号唯一 |
+| `user_interest` | 兴趣，`uk_user_interest(user_id,tag)` |
+| `place_category` / `place` | 分类与地点，保留分类索引 |
+| `tb_follow` | 关注，`uk_follow(user_id,follow_user_id)` |
+| `post` / `post_comment` | 社区动态与评论，保留用户、点赞、地点、评论关联索引 |
+| `event` | 活动地点、标签、报名窗口与容量 |
+| `event_capacity` | 活动主键与剩余名额、报名窗口 |
+| `event_registration` | 报名记录，`uk_user_event(user_id,event_id)` 及用户、活动索引 |
 
-```text
-PUT /follows/{userId}/{isFollow}
-GET /follows/or/not/{userId}
-GET /follows/common/{userId}
-```
+`sql/schema.sql` 仅用于空环境，不含 DROP TABLE；`sql/data.sql` 为模拟数据，包含四类地点及 Java、篮球、AI、摄影活动。容量与窗口从活动表复制，保持一致。已有数据库使用 [迁移流程](docs/migration.md) 和 `sql/migrations/001_rename_community_tables.sql`，禁止重跑初始化脚本。
 
-校园活动：
+## 8. Docker 部署
 
-```text
-GET  /events
-GET  /events/{id}
-POST /events
-GET  /events/hot
-GET  /events/by-place/{placeId}
-POST /events/{eventId}/registrations
-GET  /events/{eventId}/registrations/status
-GET  /events/recommendations?limit=10
-GET  /event-registrations/me
-```
-
-用户兴趣：
-
-```text
-PUT /users/interests
-GET /users/interests
-```
-
-搜索索引维护：
-
-```text
-POST /admin/search/places/rebuild
-```
-
-## 9. 数据库
-
-初始化脚本：
-
-```text
-sql/schema.sql
-sql/data.sql
-```
-
-核心表：
-
-- `tb_user`：用户基础信息。
-- `tb_user_info`：用户扩展信息。
-- `user_interest`：用户兴趣标签，唯一索引 `uk_user_interest(user_id, tag)`。
-- `place_category`：校园地点分类。
-- `campus_place`：校园地点。
-- `campus_post`：校园动态，`place_id` 允许为空。
-- `campus_post_comments`：校园动态评论。
-- `tb_follow`：用户关注关系。
-- `campus_event`：校园活动主数据。
-- `event_capacity`：热门活动报名剩余名额和报名时间窗口。
-- `event_registration`：活动报名记录，唯一索引 `uk_user_event(user_id, event_id)`。
-
-## 10. Docker Quick Start
-
-启动 MySQL、Redis、RabbitMQ、Elasticsearch：
+需要 Maven、可用 JDK（编译目标 Java 8）和 Docker Compose。Compose 启动中间件，Java 应用单独运行。
 
 ```bash
-docker compose up -d
+cp .env.example .env
+docker compose --env-file .env config
+docker compose --env-file .env up -d
+docker compose ps
 ```
 
-默认宿主机端口：
+`.env` 供 Compose 替换变量，**Spring Boot 不会自动加载 `.env`**。Java 进程也需导入这些变量。以下为 Bash 的全新本机环境示例：
 
-```text
-MySQL:         13306 -> 3306
-Redis:         16379 -> 6379
-RabbitMQ:      5673  -> 5672
-RabbitMQ UI:   15673 -> 15672
-Elasticsearch: 19200 -> 9200
+```bash
+set -a
+. ./.env
+set +a
+mvn clean package
+java -jar target/nexushub-0.0.1-SNAPSHOT.jar
 ```
 
-默认开发配置：
+PowerShell 可逐项设置 `$env:DB_PORT='13306'` 等变量，或参考 `src/main/resources/application-local.yml.example` 创建不提交 Git 的本地配置并启用 `local` profile。默认 HTTP 端口为 8080。
 
-```text
-DB_NAME=campuslink
-DB_PASSWORD=campuslink_dev
-REDIS_PASSWORD=campuslink_dev
-RABBITMQ_USERNAME=campuslink
-RABBITMQ_PASSWORD=campuslink_dev
-PLACE_CACHE_STRATEGY=PASS_THROUGH
-PLACE_SEARCH_INDEX=campuslink_place
-EVENT_SLOTS_WARMUP_ENABLED=true
-ALIYUN_OSS_ENABLED=false
-ALIYUN_OSS_ENDPOINT=https://oss-cn-beijing.aliyuncs.com
-ALIYUN_OSS_BUCKET_NAME=java-ai-wujiaohuang
-ALIYUN_OSS_PUBLIC_BASE_URL=https://java-ai-wujiaohuang.oss-cn-beijing.aliyuncs.com
-```
+| 中间件 | 容器名 | 默认宿主机端口 |
+| --- | --- | --- |
+| MySQL 8.0 | `nexushub-mysql` | 13306 |
+| Redis 6.2 | `nexushub-redis` | 16379 |
+| RabbitMQ 3.12 | `nexushub-rabbitmq` | AMQP 5673，管理 15673 |
+| Elasticsearch 7.6.2 | `nexushub-elasticsearch` | 19200 |
 
-PowerShell 启动应用：
+保留 `DB_HOST/PORT/NAME/USERNAME/PASSWORD`、`REDIS_HOST/PORT/PASSWORD/DATABASE`、`RABBITMQ_HOST/PORT/USERNAME/PASSWORD`、`ELASTICSEARCH_HOST/PORT` 等原变量名称。应用直连默认端口仍为 3306、6379、5672，连接 Compose 宿主机端口需导入示例变量。
 
-```powershell
-$env:DB_PORT="13306"
-$env:DB_NAME="campuslink"
-$env:DB_PASSWORD="campuslink_dev"
-$env:REDIS_PORT="16379"
-$env:REDIS_PASSWORD="campuslink_dev"
-$env:RABBITMQ_PORT="5673"
-$env:RABBITMQ_USERNAME="campuslink"
-$env:RABBITMQ_PASSWORD="campuslink_dev"
-$env:ELASTICSEARCH_PORT="19200"
-mvn spring-boot:run
-```
+示例密码 `nexushub_dev` 仅供本机开发，真实凭据通过环境提供。OSS 默认关闭，启用时设置 `ALIYUN_OSS_ENABLED`、`ALIYUN_OSS_ENDPOINT`、`ALIYUN_OSS_BUCKET`、`ALIYUN_OSS_ACCESS_KEY_ID`、`ALIYUN_OSS_ACCESS_KEY_SECRET`、`ALIYUN_OSS_PUBLIC_BASE_URL`。模拟上传不持久化文件，也不提供图片下载服务。
 
-### 阿里云 OSS 媒体上传
+新卷不会自动迁移旧数据，复用方式见 [数据保留说明](docs/migration.md)，禁止自动删除旧卷。
 
-默认 `ALIYUN_OSS_ENABLED=false`，后端会返回本地 mock URL，便于无云账号环境完成联调。生产或真实联调时设置：
+## 9. 接口文档
 
-```powershell
-$env:ALIYUN_OSS_ENABLED="true"
-$env:ALIYUN_OSS_ENDPOINT="https://oss-cn-beijing.aliyuncs.com"
-$env:ALIYUN_OSS_BUCKET_NAME="java-ai-wujiaohuang"
-$env:ALIYUN_OSS_PUBLIC_BASE_URL="https://java-ai-wujiaohuang.oss-cn-beijing.aliyuncs.com"
-$env:ALIYUN_OSS_ACCESS_KEY_ID="<YOUR_KEY_ID>"
-$env:ALIYUN_OSS_ACCESS_KEY_SECRET="<YOUR_KEY_SECRET>"
-mvn spring-boot:run
-```
+请求字段、JSON 响应和 URL 保持现有契约。统一 `Result` 响应含 `success`、`errorMsg`、`data`、`total`。登录后在 `authorization` 请求头中直接传 token。
 
-上传接口要求登录态。普通用户仅允许 `AVATAR` 和 `POST` 场景，图片类型限制为 `jpg/jpeg/png/webp`；头像最大 5MB，动态图片最大 10MB。对象路径按业务隔离：头像写入 `avatars/{userId}/`，动态图片写入 `posts/{userId}/{yyyyMM}/`。更新头像时，后端会校验 URL 必须属于当前用户上传前缀，避免越权绑定他人图片。
+| 方法与路径 | 用途 |
+| --- | --- |
+| `POST /auth/code?phone=...` / `POST /auth/login` | 验证码与登录，保留 `/users` 别名 |
+| `GET /users/me`、`PUT /users/profile`、`PUT /users/avatar` | 当前用户与资料 |
+| `GET/PUT /users/interests`、`POST /users/sign`、`GET /users/sign/count` | 兴趣与签到 |
+| `GET /place-categories/list` | 地点分类 |
+| `GET /places/{id}`、`POST /places`、`PUT /places` | 地点详情、新增、更新 |
+| `GET /places/nearby?categoryId=1&current=1&x=120.15&y=30.28` | 附近地点，不传坐标时按分类分页 |
+| `GET /places/of/name`、`GET /places/search` | 名称查询与 ES 搜索 |
+| `POST /posts`、`GET /posts/{id}`、`GET /posts/hot` | 社区动态 |
+| `PUT /posts/like/{id}`、`GET /posts/likes/{id}` | 点赞与点赞列表 |
+| `GET /posts/of/me`、`GET /posts/of/user?id=...` | 用户动态 |
+| `GET /feeds?lastId=...&offset=0` | 关注 Feed，保留 `/posts/feeds` |
+| `PUT /follows/{id}/{isFollow}`、`GET /follows/or/not/{id}`、`GET /follows/common/{id}` | 关注与共同关注 |
+| `GET /events`、`GET /events/{id}`、`POST /events` | 活动列表、详情、创建 |
+| `GET /events/hot`、`GET /events/by-place/{placeId}`、`GET /events/recommendations` | 热门、地点活动、推荐 |
+| `POST /events/{eventId}/registrations`、`POST /event-registrations/{eventId}` | 异步报名 |
+| `GET /events/{eventId}/registrations/status`、`GET /event-registrations/me` | 报名结果与记录 |
+| `POST /uploads/image` | multipart `file`、`scene`；当前用户可用 AVATAR/POST，PLACE/EVENT 保留权限限制 |
+| `POST /admin/search/places/rebuild` | 当前配置的地点索引重建 |
 
-## 11. 测试
+保留历史 `/upload` 接口；`/posts-comments` 控制器尚无业务方法，不宣称已实现评论 CRUD。仓库未引入 Swagger/OpenAPI 依赖，文档依据实际 Controller。管理接口当前仅受登录保护，没有额外角色授权。
+
+## 10. 测试
 
 ```bash
 mvn clean compile
 mvn test
+mvn clean package
 ```
 
-当前测试覆盖 Spring Context、Mapper 基础查询、RedisIdWorker、缓存策略、校园地点搜索转换/查询/同步事件、报名责任链、Lua 报名脚本、报名事务落库与 Redis 补偿，以及媒体上传校验、mock 存储、头像 URL 越权校验和上传 Controller。
+JUnit 5、Mockito、H2 MySQL 模式测试覆盖 Spring 上下文、Mapper、数据库一致性、缓存、搜索查询与转换、Feed、推荐、报名校验、条件扣减与回滚、消息消费与补偿、媒体校验与模拟上传。测试 profile 不启动 RabbitMQ 监听、Redisson、GEO 初始化或真实 Redis 名额预热。
 
-## 12. CampusLink Frontend
+Lua 源码断言和 Mock 调用不能替代真实中间件执行。Docker 可用后按 [联调指引](docs/integration.md) 验证 Redis 原子性、RabbitMQ 重投/死信、MySQL 并发容量与 ES 搜索。真实 OSS 需有效凭据；默认测试验证接口、校验和模拟存储。
 
-本仓库新增 `frontend/`，提供一套面向微信小程序主端与 H5 Demo 的 Taro + React + TypeScript 前端。
+## 11. 项目技术亮点
 
-```text
-Spring Boot Backend
-  ↓
-REST API
-  ↓
-Taro Frontend
-  ↙        ↘
-WeChat     H5
-```
+- Redis Lua 原子预占、RabbitMQ 异步处理、Redisson 锁、MySQL 唯一约束和条件扣减保护活动报名。
+- 可替换缓存策略处理缓存穿透与热点重建，保留 Cache Aside 更新流程。
+- GEO 附近检索、Bitmap 签到、ZSet 点赞与滚动 Feed。
+- Elasticsearch 组合检索、事务提交后增量同步与批量重建。
+- H2 测试验证 Mapper、报名幂等和事务回滚，独立脚本区分初始化与数据迁移。
 
-### 前端能力
-
-- 首页：今日校园、热门活动、校园动态。
-- 发现：地点分类、附近地点、定位失败回退默认校园位置。
-- 搜索：300ms debounce、历史搜索、地点实时结果。
-- 动态：热门动态、发布文字动态、点赞乐观更新。
-- 媒体：H5 与微信小程序选择图片、头像上传、动态图片并发上传、预览和删除。
-- 活动：推荐、热门、全部活动，活动详情与异步报名轮询。
-- 我的：登录、退出、我的活动、兴趣标签。
-- H5 Demo Mode：`TARO_APP_DEMO_MODE=true` 时使用北邮校园语境 mock 数据。
-
-### 启动
-
-```bash
-cd frontend
-pnpm install
-pnpm dev:weapp
-pnpm dev:h5
-```
-
-### 构建
-
-```bash
-cd frontend
-pnpm lint
-pnpm test
-pnpm build:weapp
-pnpm build:h5
-```
-
-### 环境变量
-
-复制 `frontend/.env.example` 并按环境调整：
-
-```text
-TARO_APP_API_BASE_URL=http://localhost:8080
-TARO_APP_DEMO_MODE=false
-```
-
-生产微信小程序请求域名必须配置 HTTPS 合法域名。开发阶段可在微信开发者工具中关闭域名校验。
-
-### 文档
-
-- 前端真实接口契约：`docs/frontend-api-contract.md`
-- 60 秒演示路线：`docs/demo-script.md`
-- 面试讲解：`docs/frontend-interview.md`
+未进行生产容量压测，不提供未经测量的 QPS、TPS 或性能提升比例。
