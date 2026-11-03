@@ -34,6 +34,9 @@ public class EventRegistrationCompensationServiceImpl implements EventRegistrati
                 RedisConstants.EVENT_REGISTRATION_COMPENSATED_KEY + message.getRegistrationId(),
                 String.valueOf(message.getUserId()),
                 "86400");
+        if (result == null || (result != 0L && result != 1L)) {
+            throw new IllegalStateException("报名 Redis 补偿结果未确认");
+        }
         log.warn("热门报名失败报名记录 Redis 补偿完成，registrationId={}, eventId={}, userId={}, result={}",
                 message.getRegistrationId(), message.getEventId(), message.getUserId(), result);
         return result;

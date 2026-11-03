@@ -1,5 +1,7 @@
 package com.nexushub.controller;
 
+import com.nexushub.security.AdminOnly;
+
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.StrUtil;
 import com.nexushub.dto.Result;
@@ -35,6 +37,7 @@ public class UploadController {
     }
 
     @GetMapping("/posts/delete")
+    @AdminOnly
     public Result deletePostImg(@RequestParam("name") String filename) {
         File file = new File(SystemConstants.IMAGE_UPLOAD_DIR, filename);
         if (file.isDirectory()) {

@@ -56,8 +56,8 @@ flowchart LR
 
 1. `RegistrationValidationChain` 校验活动容量记录与报名时间窗口。
 2. `event_registration.lua` 原子检查名额与重复报名，成功后扣减 Redis 名额并记录用户。
-3. 发送 `EventRegistrationMessage` 至原有 Exchange 和 Queue。HTTP 成功表示报名已受理，最终结果通过状态接口查询。
-4. Consumer 调用事务 Service，使用活动与用户维度的 Redisson 锁。
+3. 发送 `EventRegistrationMessage` 至原有 Exchange 和 Queue，启用关联 publisher confirms 和 mandatory returns。仅在 broker 确认且没有退回消息后返回受理成功；最终落库结果仍通过状态接口查询。
+4. Consumer 调用事务 Service，使用活动与用户维度的 Redisson 锁。锁获取失败或线程中断会抛出异常，交由监听容器重试及死信处理，不会直接返回并确认未落库消息。
 5. 查询重复记录，**先插入报名记录，再条件扣减数据库容量**，两者处于同一事务中。唯一索引冲突或容量更新失败均回滚。
 6. 监听容器按原配置重试，耗尽后进入死信队列。死信消费者先检查该报名记录是否已落库，未落库才执行 Redis 补偿。
 7. `compensate_event_registration.lua` 通过 `event:registration:compensated:{registrationId}` 保证同一报名补偿幂等，标记 TTL 为 86400 秒。
@@ -72,7 +72,7 @@ WHERE event_id = ? AND remaining_slots > 0;
 
 `event_registration.uk_user_event(user_id,event_id)` 防止重复记录，重投已落库消息不会再次消耗容量。Exchange、Queue、Routing Key 与原实现相同。
 
-现有实现的边界：未引入事务 Outbox 或发送确认补偿，Redis 扣减后发送 MQ 失败仍需运维核对。锁释放发生在方法内部，事务由代理在方法返回后提交，最终并发安全依赖数据库唯一索引及条件更新。启动预热会从 MySQL 写回 Redis 名额，因此有在途报名时不得直接重启或混跑迁移实例。补偿标记有效期为一天，超期死信回放需人工审核。本次重构保留原有事务和算法边界。
+发送处理区分明确失败和结果不确定：发布前连接失败、序列化失败、mandatory 退回及 broker 拒绝会调用既有幂等 Lua 补偿；确认超时、连接中断或框架产生的 nack 可能已送达，保留预占并返回待确认提示。补偿失败会返回待处理并记录关联 ID，不能宣称名额已经恢复。未引入事务 Outbox，进程崩溃或投递结果不确定仍需运维核对，不能宣称消息绝对可靠。锁释放发生在方法内部，事务由代理在方法返回后提交，最终并发安全依赖数据库唯一索引及条件更新。启动预热会从 MySQL 写回 Redis 名额，因此有在途报名时不得直接重启或混跑迁移实例。补偿标记有效期为一天，超期死信回放需人工审核。本次重构保留原有事务和算法边界。
 
 ## 5. Redis 设计
 
@@ -152,6 +152,8 @@ PowerShell 可逐项设置 `$env:DB_PORT='13306'` 等变量，或参考 `src/mai
 
 示例密码 `nexushub_dev` 仅供本机开发，真实凭据通过环境提供。OSS 默认关闭，启用时设置 `ALIYUN_OSS_ENABLED`、`ALIYUN_OSS_ENDPOINT`、`ALIYUN_OSS_BUCKET`、`ALIYUN_OSS_ACCESS_KEY_ID`、`ALIYUN_OSS_ACCESS_KEY_SECRET`、`ALIYUN_OSS_PUBLIC_BASE_URL`。模拟上传不持久化文件，也不提供图片下载服务。
 
+`ADMIN_USER_IDS` 为逗号分隔的可信管理员用户 ID，默认留空；需要管理操作时在服务端配置并重启。`REGISTRATION_PUBLISH_CONFIRM_TIMEOUT_MS` 默认 5000 毫秒。可靠性边界及对账见 [质量验收说明](docs/quality-acceptance.md)。
+
 新卷不会自动迁移旧数据，复用方式见 [数据保留说明](docs/migration.md)，禁止自动删除旧卷。
 
 ## 9. 接口文档
@@ -179,7 +181,7 @@ PowerShell 可逐项设置 `$env:DB_PORT='13306'` 等变量，或参考 `src/mai
 | `POST /uploads/image` | multipart `file`、`scene`；当前用户可用 AVATAR/POST，PLACE/EVENT 保留权限限制 |
 | `POST /admin/search/places/rebuild` | 当前配置的地点索引重建 |
 
-保留历史 `/upload` 接口；`/posts-comments` 控制器尚无业务方法，不宣称已实现评论 CRUD。仓库未引入 Swagger/OpenAPI 依赖，文档依据实际 Controller。管理接口当前仅受登录保护，没有额外角色授权。
+保留历史 `/upload` 接口；`/posts-comments` 控制器尚无业务方法，不宣称已实现评论 CRUD。仓库未引入 Swagger/OpenAPI 依赖，文档依据实际 Controller。仅标注 `@PublicEndpoint` 的读取和认证入口允许匿名调用；活动/地点管理写入、历史图片删除与索引重建要求登录且用户 ID 在服务端 `ADMIN_USER_IDS` 白名单内。白名单默认空，拒绝所有管理操作。匿名返回 401，已登录但未授权返回 403。该白名单只能由运维配置，不能从请求字段授予权限。
 
 ## 10. 测试
 

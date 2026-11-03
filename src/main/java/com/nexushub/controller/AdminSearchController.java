@@ -1,5 +1,7 @@
 package com.nexushub.controller;
 
+import com.nexushub.security.AdminOnly;
+
 import com.nexushub.dto.Result;
 import com.nexushub.search.PlaceSearchService;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +20,7 @@ public class AdminSearchController {
     private PlaceSearchService placeSearchService;
 
     @PostMapping("/rebuild")
+    @AdminOnly
     public Result rebuildPlaceIndex() {
         try {
             long count = placeSearchService.rebuild();

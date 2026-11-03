@@ -14,11 +14,15 @@ import com.nexushub.registration.RegistrationContext;
 import com.nexushub.registration.RegistrationValidationChain;
 import com.nexushub.service.IEventCapacityService;
 import com.nexushub.service.IEventRegistrationService;
+import com.nexushub.service.EventRegistrationCompensationService;
 import com.nexushub.utils.RedisConstants;
 import com.nexushub.utils.RedisIdWorker;
 import com.nexushub.utils.UserHolder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.rabbit.connection.CorrelationData;
+import org.springframework.amqp.AmqpConnectException;
+import org.springframework.amqp.support.converter.MessageConversionException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -29,6 +33,9 @@ import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 @Slf4j
 @Service
@@ -46,6 +53,11 @@ public class EventRegistrationServiceImpl extends ServiceImpl<EventRegistrationM
     private RabbitTemplate rabbitTemplate;
     @Resource
     private RegistrationValidationChain registrationValidationChain;
+    @Resource
+    private EventRegistrationCompensationService compensationService;
+
+    @Value("${nexushub.registration.publish-confirm-timeout-ms:5000}")
+    private long publishConfirmTimeoutMs;
 
     @Value("${nexushub.registration.slots-warmup-enabled:true}")
     private boolean slotsWarmupEnabled;
@@ -88,9 +100,53 @@ public class EventRegistrationServiceImpl extends ServiceImpl<EventRegistrationM
             return Result.fail(r == 1 ? "活动剩余名额不足" : "不能重复报名");
         }
         EventRegistrationMessage message = new EventRegistrationMessage(registrationId, user.getId(), eventId, LocalDateTime.now());
-        rabbitTemplate.convertAndSend(MqConstants.EVENT_REGISTRATION_EXCHANGE, MqConstants.EVENT_REGISTRATION_ROUTING_KEY, message);
-        log.info("热门活动报名资格校验通过，报名消息已发送，registrationId={}, eventId={}, userId={}", registrationId, eventId, user.getId());
-        return Result.ok(registrationId);
+        CorrelationData correlation = new CorrelationData(String.valueOf(registrationId));
+        try {
+            rabbitTemplate.convertAndSend(MqConstants.EVENT_REGISTRATION_EXCHANGE,
+                    MqConstants.EVENT_REGISTRATION_ROUTING_KEY, message, correlation);
+            CorrelationData.Confirm confirm = correlation.getFuture()
+                    .get(Math.max(1, publishConfirmTimeoutMs), TimeUnit.MILLISECONDS);
+            if (correlation.getReturnedMessage() != null
+                    || (!confirm.isAck() && confirm.getReason() == null)) {
+                return compensateRejectedPublish(message);
+            }
+            if (!confirm.isAck()) {
+                // A framework-generated nack (e.g. connection close) does not prove non-delivery.
+                return uncertainPublish(message, new IllegalStateException(confirm.getReason()));
+            }
+            log.info("报名消息已获 broker 确认，registrationId={}, eventId={}, userId={}", registrationId, eventId, user.getId());
+            return Result.ok(registrationId);
+        } catch (AmqpConnectException | MessageConversionException notSent) {
+            log.warn("报名消息在发布前失败，registrationId={}", registrationId, notSent);
+            return compensateRejectedPublish(message);
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            return uncertainPublish(message, interrupted);
+        } catch (TimeoutException | ExecutionException uncertain) {
+            return uncertainPublish(message, uncertain);
+        } catch (RuntimeException uncertain) {
+            return uncertainPublish(message, uncertain);
+        }
+    }
+
+    private Result compensateRejectedPublish(EventRegistrationMessage message) {
+        try {
+            Long result = compensationService.compensate(message);
+            if (result == null || (result != 0L && result != 1L)) {
+                throw new IllegalStateException("未确认 Redis 名额补偿结果");
+            }
+            return Result.fail("报名消息发送失败，名额已恢复，请重试");
+        } catch (RuntimeException compensationFailure) {
+            log.error("报名消息未投递且补偿失败，需要人工核对，registrationId={}, eventId={}, userId={}",
+                    message.getRegistrationId(), message.getEventId(), message.getUserId(), compensationFailure);
+            return Result.fail("报名提交失败，名额恢复待处理，请稍后查询报名状态");
+        }
+    }
+
+    private Result uncertainPublish(EventRegistrationMessage message, Exception cause) {
+        log.error("报名投递结果不确定，保留预占名额，需要核对，registrationId={}, eventId={}, userId={}",
+                message.getRegistrationId(), message.getEventId(), message.getUserId(), cause);
+        return Result.fail("报名发送结果待确认，请稍后查询报名状态");
     }
 
     @Override

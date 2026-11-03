@@ -44,7 +44,7 @@ mysql --host=127.0.0.1 --port=13306 --user=root --password nexushub \
 
 复用 MySQL 卷时，`MYSQL_DATABASE` 环境变量不会重建或迁移已存在的数据目录，仍须手动完成新库恢复。密码也不会随新环境变量自动修改。Redis 必须复用原凭据；保留所有通用 Key，包括登录、GEO、Feed、点赞和补偿标记。RabbitMQ 复用数据时必须保留原节点名、hostname、cookie 和用户凭据，不能仅凭替换卷名启动；先记录旧容器配置，必要时使用专门 Compose override。`RABBITMQ_DEFAULT_USER/PASS` 只用于空目录初始化。
 
-RabbitMQ Exchange、Queue、Routing Key 保持原值。包名更改会影响 JSON 消息的 Java 类型头；消费者的具体 `EventRegistrationMessage` 参数使用 Spring AMQP 默认的推断类型优先策略，回归测试覆盖旧类型头。仍应按上文排空队列后再切换，避免新旧消费者混跑。
+RabbitMQ Exchange、Queue、Routing Key 保持原值。包名更改会影响 JSON 消息的 Java 类型头；转换器对旧 `com.campuslink.dto.EventRegistrationMessage` 类型头提供明确的只入站别名，消费者仍使用具体 `EventRegistrationMessage` 参数；新消息仅发出新包名。回归测试覆盖有/无推断类型的旧消息，不信任其他旧 Java 类型。仍应按上文排空队列后再切换，避免新旧消费者混跑。
 
 ## Elasticsearch：保留旧索引，重建新索引
 

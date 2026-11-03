@@ -1,6 +1,6 @@
 # 真实中间件联调
 
-仅在独立测试环境使用模拟数据执行。不要对生产活动注入失败、构造重投消息或修改剩余容量。先按 README 启动中间件和应用；确认所有健康检查通过、应用日志出现启动完成和 GEO 初始化完成。
+仅在独立测试环境使用模拟数据执行。管理写入和索引重建必须使用服务端 `ADMIN_USER_IDS` 配置的管理员账号；普通账号应返回 403，匿名应返回 401。不要对生产活动注入失败、构造重投消息或修改剩余容量。先按 README 启动中间件和应用；确认所有健康检查通过、应用日志出现启动完成和 GEO 初始化完成。
 
 ## 登录与基础业务
 
@@ -50,6 +50,6 @@ curl 'http://localhost:8080/places/search?categoryId=1&minPrice=0&maxPrice=100&m
 
 ## 本次重构验证范围
 
-自动化测试在 JDK 17 上运行，Maven 编译目标仍为 Java 8；42 项 JUnit/H2/Mockito 测试通过。独立 Docker 验证环境使用 MySQL 8.0、Redis 6.2、RabbitMQ 3.12-management、Elasticsearch 7.6.2，按上面的基础业务、索引、并发和补偿场景执行。生产数据未参与验证。
+自动化测试在 JDK 17 上运行，Maven 编译目标仍为 Java 8；自动化结果以本次质量验收报告为准，测试包含 JUnit/H2/Mockito 和接口权限回归。独立 Docker 验证环境使用 MySQL 8.0、Redis 6.2、RabbitMQ 3.12-management、Elasticsearch 7.6.2，按上面的基础业务、索引、并发和补偿场景执行。生产数据未参与验证。
 
 数据库迁移验证使用旧版 schema/data 生成独立模拟源库，再备份恢复到空目标库并执行改名脚本，逐表比对 11 张表的全部记录、逻辑索引及已有报名容量；重复执行脚本应失败且不影响已迁移数据。迁移与回退步骤见 [migration.md](migration.md)。

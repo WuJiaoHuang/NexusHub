@@ -1,5 +1,7 @@
 package com.nexushub.controller;
 
+import com.nexushub.security.PublicEndpoint;
+
 import cn.hutool.core.bean.BeanUtil;
 import com.nexushub.common.BusinessException;
 import com.nexushub.dto.AvatarUpdateDTO;
@@ -35,11 +37,13 @@ public class UserController {
     private IUserInterestService userInterestService;
 
     @PostMapping("/code")
+    @PublicEndpoint
     public Result sendCode(@RequestParam("phone") String phone, HttpSession session) {
         return userService.sendCode(phone, session);
     }
 
     @PostMapping("/login")
+    @PublicEndpoint
     public Result login(@Valid @RequestBody LoginFormDTO loginForm, HttpSession session) {
         return userService.login(loginForm, session);
     }

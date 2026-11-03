@@ -40,14 +40,14 @@ public class EventRegistrationTransactionalServiceImpl implements IEventRegistra
                 locked = lock.tryLock(1, 5, TimeUnit.SECONDS);
                 if (!locked) {
                     log.warn("重复报名正在处理中，userId={}, eventId={}", eventRegistration.getUserId(), eventRegistration.getEventId());
-                    return;
+                    throw new IllegalStateException("报名锁获取失败，等待消息重试");
                 }
                 doCreateEventRegistration(eventRegistration);
                 return;
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 log.warn("获取报名分布式锁被中断，userId={}, eventId={}", eventRegistration.getUserId(), eventRegistration.getEventId());
-                return;
+                throw new IllegalStateException("获取报名锁被中断，等待消息重试", e);
             } finally {
                 if (locked && lock.isHeldByCurrentThread()) {
                     lock.unlock();

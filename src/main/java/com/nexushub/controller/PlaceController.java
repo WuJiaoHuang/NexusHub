@@ -1,5 +1,8 @@
 package com.nexushub.controller;
 
+import com.nexushub.security.PublicEndpoint;
+import com.nexushub.security.AdminOnly;
+
 
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -34,6 +37,7 @@ public class PlaceController {
      * @return 地点详情数据
      */
     @GetMapping("/{id}")
+    @PublicEndpoint
     public Result queryPlaceById(@PathVariable("id") Long id) throws InterruptedException {
         return placeService.queryById(id);
     }
@@ -44,6 +48,7 @@ public class PlaceController {
      * @return 地点id
      */
     @PostMapping
+    @AdminOnly
     public Result savePlace(@RequestBody Place place) {
         // 写入数据库
         placeService.save(place);
@@ -57,6 +62,7 @@ public class PlaceController {
      * @return 无
      */
     @PutMapping
+    @AdminOnly
     public Result updatePlace(@RequestBody Place place) {
         // 写入数据库
 
@@ -70,6 +76,7 @@ public class PlaceController {
      * @return 地点列表
      */
     @GetMapping("/nearby")
+    @PublicEndpoint
     public Result queryPlaceByType(
             @RequestParam("categoryId") Integer categoryId,
             @RequestParam(value = "current", defaultValue = "1") Integer current,
@@ -80,6 +87,7 @@ public class PlaceController {
     }
 
     @GetMapping("/search")
+    @PublicEndpoint
     public Result search(PlaceSearchRequest request) {
         return placeService.search(request);
     }
@@ -91,6 +99,7 @@ public class PlaceController {
      * @return 地点列表
      */
     @GetMapping("/of/name")
+    @PublicEndpoint
     public Result queryPlaceByName(
             @RequestParam(value = "name", required = false) String name,
             @RequestParam(value = "current", defaultValue = "1") Integer current

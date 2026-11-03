@@ -69,4 +69,22 @@ class EventRegistrationListenerTest {
         assertThat(decoded).isInstanceOf(EventRegistrationMessage.class);
         assertThat(decoded).isEqualTo(message);
     }
+
+    @Test
+    void legacyHeaderCanBeReadWithoutInferredListenerTypeAndNewMessagesUseNewPackage() {
+        MessageConverter converter = new QueueConfig().messageConverter();
+        Message encoded = converter.toMessage(message, new MessageProperties());
+        assertThat(encoded.getMessageProperties().getHeaders().get("__TypeId__"))
+                .isEqualTo("com.nexushub.dto.EventRegistrationMessage");
+        encoded.getMessageProperties().setHeader("__TypeId__", "com.campuslink.dto.EventRegistrationMessage");
+        assertThat(converter.fromMessage(encoded)).isEqualTo(message);
+    }
+
+    @Test
+    void unknownLegacyTypesAreNotTrustedForDeserialization() {
+        MessageConverter converter = new QueueConfig().messageConverter();
+        Message encoded = converter.toMessage(message, new MessageProperties());
+        encoded.getMessageProperties().setHeader("__TypeId__", "com.campuslink.entity.CampusEvent");
+        assertThatThrownBy(() -> converter.fromMessage(encoded)).isInstanceOf(IllegalArgumentException.class);
+    }
 }

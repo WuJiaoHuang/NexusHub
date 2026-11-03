@@ -1,5 +1,7 @@
 package com.nexushub.controller;
 
+import com.nexushub.security.PublicEndpoint;
+
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.nexushub.dto.Result;
@@ -61,6 +63,7 @@ public class PostController {
      * @return
      */
     @GetMapping("/hot")
+    @PublicEndpoint
     public Result queryHotPost(@RequestParam(value = "current", defaultValue = "1") Integer current) {
        return postService.queryHotPost(current);
     }

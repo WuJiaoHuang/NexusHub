@@ -23,6 +23,8 @@ spring:
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USERNAME:nexushub}
     password: ${RABBITMQ_PASSWORD:nexushub_dev}
+    publisher-confirm-type: correlated
+    publisher-returns: true
     listener:
       simple:
         default-requeue-rejected: false
@@ -49,6 +51,8 @@ logging:
     com.nexushub: info
 
 nexushub:
+  security:
+    admin-user-ids: ${ADMIN_USER_IDS:}
   cache:
     place-strategy: ${PLACE_CACHE_STRATEGY:PASS_THROUGH}
   search:
@@ -56,6 +60,7 @@ nexushub:
     rebuild-batch-size: ${PLACE_SEARCH_REBUILD_BATCH_SIZE:500}
   registration:
     slots-warmup-enabled: ${EVENT_SLOTS_WARMUP_ENABLED:true}
+    publish-confirm-timeout-ms: ${REGISTRATION_PUBLISH_CONFIRM_TIMEOUT_MS:5000}
 
 aliyun:
   oss:

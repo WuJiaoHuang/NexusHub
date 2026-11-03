@@ -12,12 +12,23 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class EventRegistrationCompensationTest {
+
+    @Test
+    void missingLuaResultMustFailInsteadOfAcknowledgingSuccessfulCompensation() {
+        StringRedisTemplate redis = Mockito.mock(StringRedisTemplate.class);
+        EventRegistrationCompensationServiceImpl service = new EventRegistrationCompensationServiceImpl();
+        ReflectionTestUtils.setField(service, "stringRedisTemplate", redis);
+        EventRegistrationMessage message = new EventRegistrationMessage(99L, 7L, 1L, LocalDateTime.now());
+
+        assertThatThrownBy(() -> service.compensate(message)).isInstanceOf(IllegalStateException.class);
+    }
 
     @Test
     void compensateShouldExecuteLuaWithStockOrderAndIdempotentKeys() {

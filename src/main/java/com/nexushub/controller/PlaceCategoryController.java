@@ -1,5 +1,7 @@
 package com.nexushub.controller;
 
+import com.nexushub.security.PublicEndpoint;
+
 
 import com.nexushub.dto.Result;
 import com.nexushub.entity.PlaceCategory;
@@ -26,6 +28,7 @@ public class PlaceCategoryController {
     private IPlaceCategoryService typeService;
 
     @GetMapping("list")
+    @PublicEndpoint
     public Result queryTypeList() {
 //        List<PlaceCategory> typeList = typeService
 //                .query().orderByAsc("sort").list();
