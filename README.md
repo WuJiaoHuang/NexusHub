@@ -147,15 +147,6 @@ PowerShell 可逐项设置 `$env:DB_PORT='13306'` 等变量，或参考 `src/mai
 | Redis 6.2 | `nexushub-redis` | 16379 |
 | RabbitMQ 3.12 | `nexushub-rabbitmq` | AMQP 5673，管理 15673 |
 | Elasticsearch 7.6.2 | `nexushub-elasticsearch` | 19200 |
-
-保留 `DB_HOST/PORT/NAME/USERNAME/PASSWORD`、`REDIS_HOST/PORT/PASSWORD/DATABASE`、`RABBITMQ_HOST/PORT/USERNAME/PASSWORD`、`ELASTICSEARCH_HOST/PORT` 等原变量名称。应用直连默认端口仍为 3306、6379、5672，连接 Compose 宿主机端口需导入示例变量。
-
-示例密码 `nexushub_dev` 仅供本机开发，真实凭据通过环境提供。OSS 默认关闭，启用时设置 `ALIYUN_OSS_ENABLED`、`ALIYUN_OSS_ENDPOINT`、`ALIYUN_OSS_BUCKET`、`ALIYUN_OSS_ACCESS_KEY_ID`、`ALIYUN_OSS_ACCESS_KEY_SECRET`、`ALIYUN_OSS_PUBLIC_BASE_URL`。模拟上传不持久化文件，也不提供图片下载服务。
-
-`ADMIN_USER_IDS` 为逗号分隔的可信管理员用户 ID，默认留空；需要管理操作时在服务端配置并重启。`REGISTRATION_PUBLISH_CONFIRM_TIMEOUT_MS` 默认 5000 毫秒。可靠性边界及对账见 [质量验收说明](docs/quality-acceptance.md)。
-
-新卷不会自动迁移旧数据，复用方式见 [数据保留说明](docs/migration.md)，禁止自动删除旧卷。
-
 ## 9. 接口文档
 
 请求字段、JSON 响应和 URL 保持现有契约。统一 `Result` 响应含 `success`、`errorMsg`、`data`、`total`。登录后在 `authorization` 请求头中直接传 token。
@@ -181,21 +172,9 @@ PowerShell 可逐项设置 `$env:DB_PORT='13306'` 等变量，或参考 `src/mai
 | `POST /uploads/image` | multipart `file`、`scene`；当前用户可用 AVATAR/POST，PLACE/EVENT 保留权限限制 |
 | `POST /admin/search/places/rebuild` | 当前配置的地点索引重建 |
 
-保留历史 `/upload` 接口；`/posts-comments` 控制器尚无业务方法，不宣称已实现评论 CRUD。仓库未引入 Swagger/OpenAPI 依赖，文档依据实际 Controller。仅标注 `@PublicEndpoint` 的读取和认证入口允许匿名调用；活动/地点管理写入、历史图片删除与索引重建要求登录且用户 ID 在服务端 `ADMIN_USER_IDS` 白名单内。白名单默认空，拒绝所有管理操作。匿名返回 401，已登录但未授权返回 403。该白名单只能由运维配置，不能从请求字段授予权限。
 
-## 10. 测试
 
-```bash
-mvn clean compile
-mvn test
-mvn clean package
-```
-
-JUnit 5、Mockito、H2 MySQL 模式测试覆盖 Spring 上下文、Mapper、数据库一致性、缓存、搜索查询与转换、Feed、推荐、报名校验、条件扣减与回滚、消息消费与补偿、媒体校验与模拟上传。测试 profile 不启动 RabbitMQ 监听、Redisson、GEO 初始化或真实 Redis 名额预热。
-
-Lua 源码断言和 Mock 调用不能替代真实中间件执行。Docker 可用后按 [联调指引](docs/integration.md) 验证 Redis 原子性、RabbitMQ 重投/死信、MySQL 并发容量与 ES 搜索。真实 OSS 需有效凭据；默认测试验证接口、校验和模拟存储。
-
-## 11. 项目技术亮点
+## 10. 项目技术亮点
 
 - Redis Lua 原子预占、RabbitMQ 异步处理、Redisson 锁、MySQL 唯一约束和条件扣减保护活动报名。
 - 可替换缓存策略处理缓存穿透与热点重建，保留 Cache Aside 更新流程。
